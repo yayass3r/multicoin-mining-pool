@@ -1,0 +1,26 @@
+services:
+  # =====================================================
+  # Web Service - لوحة التحكم والـ API
+  # =====================================================
+  - type: web
+    name: multicoin-mining-pool
+    env: node
+    region: oregon
+    plan: free
+    branch: main
+    repo: https://github.com/yayass3r/multicoin-mining-pool.git
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: KEEP_ALIVE_URL
+        fromService:
+          type: web
+          name: multicoin-mining-pool
+          property: url
+    autoDeploy: true
+    numInstances: 1

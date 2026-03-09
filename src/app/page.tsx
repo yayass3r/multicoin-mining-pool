@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-// بيانات العملات
+// بيانات العملات - ZEPH متوقف مؤقتاً
 const COINS_DATA = [
   { ticker: 'KAS', name: 'Kaspa', algorithm: 'kHeavyHash', color: '#00D4AA', port: 3333, wallet: 'kaspa:qp0nl57r2t2mntlan756383khkukmjf8z7nstl066aqdr0xcjj8n54vstafuj' },
   { ticker: 'RVN', name: 'Ravencoin', algorithm: 'KawPoW', color: '#B456BE', port: 3334, wallet: 'REFRuSaC8iHeKMeUiMg3MEJUKfUD1hmv5Y' },
-  { ticker: 'ZEPH', name: 'Zephyr', algorithm: 'RandomX', color: '#1E88E5', port: 3335, wallet: 'TO_BE_ADDED' },
+  // { ticker: 'ZEPH', name: 'Zephyr', algorithm: 'RandomX', color: '#1E88E5', port: 3335, wallet: 'TO_BE_ADDED' }, // ⛔ متوقف
   { ticker: 'ALPH', name: 'Alephium', algorithm: 'Blake3', color: '#FF6B35', port: 3336, wallet: '1DJ5UX4BknPeDcwB9C3EzNGZcF9EBG5UdYAKdeWbDGz5b' },
 ];
 
@@ -59,12 +59,13 @@ export default function MiningPoolPage() {
               blocks24h: data.rvn?.blocksFound24h || 0,
               difficulty: data.rvn?.difficulty || 0.5
             },
+            // ZEPH متوقف
             ZEPH: {
-              hashrate: data.zeph?.poolHashrateFormatted || '0 H/s',
-              miners: data.zeph?.activeMiners || 0,
-              workers: data.zeph?.activeWorkers || 0,
-              blocks24h: data.zeph?.blocksFound24h || 0,
-              difficulty: data.zeph?.difficulty || 50000
+              hashrate: '0 H/s',
+              miners: 0,
+              workers: 0,
+              blocks24h: 0,
+              difficulty: 0
             },
             ALPH: {
               hashrate: data.alph?.poolHashrateFormatted || '0 H/s',
@@ -221,7 +222,7 @@ export default function MiningPoolPage() {
             border: '1px solid rgba(255,255,255,0.1)'
           }}>
             <div style={{ fontSize: '0.875rem', opacity: 0.7, marginBottom: '0.5rem' }}>العملات النشطة</div>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fbbf24' }}>4</div>
+            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fbbf24' }}>3</div>
           </div>
         </div>
 
@@ -419,7 +420,7 @@ export default function MiningPoolPage() {
         opacity: 0.7,
         fontSize: '0.875rem'
       }}>
-        <div>© 2024 MultiCoin Mining Pool - الخوارزميات: kHeavyHash, KawPoW, RandomX, Blake3</div>
+        <div>© 2024 MultiCoin Mining Pool - الخوارزميات: kHeavyHash, KawPoW, Blake3</div>
         <div style={{ marginTop: '0.5rem' }}>
           <span style={{ color: '#4ade80' }}>●</span> النظام يعمل 24/7 مع Keep-Alive
         </div>

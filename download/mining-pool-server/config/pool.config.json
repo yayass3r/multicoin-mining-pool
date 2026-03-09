@@ -77,7 +77,7 @@
     },
     
     "ZEPH": {
-      "enabled": true,
+      "enabled": false,
       "name": "Zephyr Protocol",
       "algorithm": "RandomX",
       "stratumPort": 3335,
@@ -96,7 +96,8 @@
         "password": ""
       },
       "blockRefreshInterval": 500,
-      "minConfirmations": 10
+      "minConfirmations": 10,
+      "disabledReason": "تم إيقاف التعدين مؤقتاً"
     },
     
     "ALPH": {

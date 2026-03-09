@@ -57,7 +57,7 @@ export const COIN_CONFIGS: Record<string, CoinConfig> = {
     poolFee: 1.0,
     walletAddress: "TO_BE_ADDED",
     nodeUrl: "127.0.0.1:18081",
-    enabled: true,
+    enabled: false,  // ⛔ تم إيقاف التعدين
     color: "#1E88E5",
     icon: "zephyr.svg"
   },

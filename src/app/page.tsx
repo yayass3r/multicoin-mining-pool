@@ -1,716 +1,436 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Activity, 
-  Users, 
-  Box, 
-  Zap, 
-  TrendingUp, 
-  Server, 
-  Wallet, 
-  Settings,
-  ChevronRight,
-  Circle,
-  Cpu,
-  HardDrive,
-  Network,
-  DollarSign,
-  Clock,
-  ArrowUpRight,
-  ArrowDownRight
-} from 'lucide-react';
 
-// =====================================================
-// أنواع البيانات
-// =====================================================
-interface CoinStats {
-  coin: string;
-  name: string;
-  algorithm: string;
-  enabled: boolean;
-  poolHashrate: number;
-  poolHashrateFormatted: string;
-  activeMiners: number;
-  activeWorkers: number;
-  blocksFound24h: number;
-  lastBlockTime: number;
-  lastBlockHeight: number;
-  currentHeight: number;
-  networkDifficulty: number;
-  stratumPort: number;
-  difficulty: number;
-  minPayout: number;
-  poolFee: number;
-  networkHashrate: number;
-  blockReward: number;
-  walletAddress: string;
-  color: string;
-}
-
-interface PoolData {
-  pool: {
-    name: string;
-    version: string;
-    timestamp: number;
-  };
-  total: {
-    totalMiners: number;
-    totalWorkers: number;
-    totalBlocks24h: number;
-  };
-  [key: string]: unknown;
-}
-
-// =====================================================
-// بيانات العملات الثابتة
-// =====================================================
-const COINS = [
-  { ticker: 'KAS', name: 'Kaspa', algorithm: 'kHeavyHash', color: '#00D4AA', port: 3333 },
-  { ticker: 'RVN', name: 'Ravencoin', algorithm: 'KawPoW', color: '#B456BE', port: 3334 },
-  { ticker: 'ZEPH', name: 'Zephyr Protocol', algorithm: 'RandomX', color: '#1E88E5', port: 3335 },
-  { ticker: 'ALPH', name: 'Alephium', algorithm: 'Blake3', color: '#FF6B35', port: 3336 },
+// بيانات العملات
+const COINS_DATA = [
+  { ticker: 'KAS', name: 'Kaspa', algorithm: 'kHeavyHash', color: '#00D4AA', port: 3333, wallet: 'kaspa:qp0nl57r2t2mntlan756383khkukmjf8z7nstl066aqdr0xcjj8n54vstafuj' },
+  { ticker: 'RVN', name: 'Ravencoin', algorithm: 'KawPoW', color: '#B456BE', port: 3334, wallet: 'REFRuSaC8iHeKMeUiMg3MEJUKfUD1hmv5Y' },
+  { ticker: 'ZEPH', name: 'Zephyr', algorithm: 'RandomX', color: '#1E88E5', port: 3335, wallet: 'TO_BE_ADDED' },
+  { ticker: 'ALPH', name: 'Alephium', algorithm: 'Blake3', color: '#FF6B35', port: 3336, wallet: '1DJ5UX4BknPeDcwB9C3EzNGZcF9EBG5UdYAKdeWbDGz5b' },
 ];
 
-// =====================================================
-// مكون البطاقة الرئيسية للعملة
-// =====================================================
-function CoinCard({ coin, stats }: { coin: typeof COINS[0]; stats: CoinStats | null }) {
-  const [hashrateHistory, setHashrateHistory] = useState<number[]>([]);
-  
-  useEffect(() => {
-    if (stats) {
-      setHashrateHistory(prev => {
-        const newHistory = [...prev, stats.poolHashrate];
-        return newHistory.slice(-20);
-      });
-    }
-  }, [stats]);
-
-  const formatNumber = (num: number) => {
-    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
-    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
-    if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
-    return num.toString();
-  };
-
-  const formatTime = (timestamp: number) => {
-    const diff = Date.now() - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 60) return `${minutes} دقيقة`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} ساعة`;
-    return `${Math.floor(hours / 24)} يوم`;
-  };
-
-  return (
-    <Card className="relative overflow-hidden border-2 hover:shadow-xl transition-all duration-300" 
-           style={{ borderColor: coin.color + '40' }}>
-      {/* شريط اللون العلوي */}
-      <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: coin.color }} />
-      
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                 style={{ backgroundColor: coin.color }}>
-              {coin.ticker.slice(0, 2)}
-            </div>
-            <div>
-              <CardTitle className="text-xl" style={{ color: coin.color }}>{coin.name}</CardTitle>
-              <CardDescription className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">{coin.algorithm}</Badge>
-                <span className="flex items-center gap-1 text-xs">
-                  <Server className="w-3 h-3" />
-                  منفذ: {coin.port}
-                </span>
-              </CardDescription>
-            </div>
-          </div>
-          <Badge className={`${stats?.enabled ? 'bg-green-500' : 'bg-red-500'} text-white`}>
-            {stats?.enabled ? 'نشط' : 'متوقف'}
-          </Badge>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {/* معدل الهاش */}
-        <div className="bg-muted/50 rounded-lg p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground flex items-center gap-2">
-              <Activity className="w-4 h-4" /> معدل الهاش
-            </span>
-            <TrendingUp className="w-4 h-4 text-green-500" />
-          </div>
-          <div className="text-2xl font-bold" style={{ color: coin.color }}>
-            {stats?.poolHashrateFormatted || '0 MH/s'}
-          </div>
-          <Progress value={65} className="h-1 mt-2" style={{ backgroundColor: coin.color + '20' }} />
-        </div>
-
-        {/* الإحصائيات */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-muted/30 rounded-lg p-3 text-center">
-            <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-              <Users className="w-4 h-4" />
-              <span className="text-xs">المعدنين</span>
-            </div>
-            <div className="text-xl font-bold">{formatNumber(stats?.activeMiners || 0)}</div>
-          </div>
-          <div className="bg-muted/30 rounded-lg p-3 text-center">
-            <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-              <Cpu className="w-4 h-4" />
-              <span className="text-xs">العمال</span>
-            </div>
-            <div className="text-xl font-bold">{formatNumber(stats?.activeWorkers || 0)}</div>
-          </div>
-          <div className="bg-muted/30 rounded-lg p-3 text-center">
-            <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-              <Box className="w-4 h-4" />
-              <span className="text-xs">كتل 24س</span>
-            </div>
-            <div className="text-xl font-bold text-green-500">{stats?.blocksFound24h || 0}</div>
-          </div>
-          <div className="bg-muted/30 rounded-lg p-3 text-center">
-            <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-              <Clock className="w-4 h-4" />
-              <span className="text-xs">آخر كتلة</span>
-            </div>
-            <div className="text-sm font-bold">
-              {stats?.lastBlockTime ? formatTime(stats.lastBlockTime) : '-'}
-            </div>
-          </div>
-        </div>
-
-        {/* معلومات إضافية */}
-        <div className="flex items-center justify-between text-sm pt-2 border-t">
-          <div className="flex items-center gap-1">
-            <DollarSign className="w-4 h-4 text-yellow-500" />
-            <span className="text-muted-foreground">رسوم: {stats?.poolFee || 1}%</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <HardDrive className="w-4 h-4 text-blue-500" />
-            <span className="text-muted-foreground">صعوبة: {stats?.difficulty || '-'}</span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+interface Stats {
+  totalMiners: number;
+  totalWorkers: number;
+  totalBlocks24h: number;
+  coins: Record<string, {
+    hashrate: string;
+    miners: number;
+    workers: number;
+    blocks24h: number;
+    difficulty: number;
+  }>;
 }
 
-// =====================================================
-// مكون سجل الكتل المكتشفة
-// =====================================================
-function BlockLog() {
-  const [blocks, setBlocks] = useState<Array<{
-    coin: string;
-    height: number;
-    reward: number;
-    time: string;
-    status: 'confirmed' | 'pending' | 'orphaned';
-  }>>([]);
-
-  // بيانات الكتل الثابتة
-  const mockBlocks = [
-    { coin: 'KAS', height: 1234567, reward: 10, time: 'منذ 5 دقائق', status: 'confirmed' as const },
-    { coin: 'RVN', height: 2345678, reward: 2500, time: 'منذ 12 دقيقة', status: 'confirmed' as const },
-    { coin: 'ALPH', height: 3456789, reward: 3, time: 'منذ 23 دقيقة', status: 'pending' as const },
-    { coin: 'KAS', height: 1234560, reward: 10, time: 'منذ 45 دقيقة', status: 'confirmed' as const },
-    { coin: 'ZEPH', height: 4567890, reward: 2.5, time: 'منذ ساعة', status: 'confirmed' as const },
-    { coin: 'RVN', height: 2345670, reward: 2500, time: 'منذ ساعتين', status: 'confirmed' as const },
-    { coin: 'ALPH', height: 3456780, reward: 3, time: 'منذ 3 ساعات', status: 'orphaned' as const },
-  ];
-
-  useEffect(() => {
-    setBlocks(mockBlocks);
-  }, [mockBlocks]);
-
-  const getCoinColor = (coin: string) => {
-    const colors: Record<string, string> = {
-      KAS: '#00D4AA',
-      RVN: '#B456BE',
-      ZEPH: '#1E88E5',
-      ALPH: '#FF6B35'
-    };
-    return colors[coin] || '#888';
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed': return 'bg-green-500';
-      case 'pending': return 'bg-yellow-500';
-      case 'orphaned': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Box className="w-5 h-5" />
-          آخر الكتل المكتشفة
-        </CardTitle>
-        <CardDescription>قائمة بأحدث الكتل التي تم تعدينها</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[300px]">
-          <div className="space-y-3">
-            {blocks.map((block, index) => (
-              <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                       style={{ backgroundColor: getCoinColor(block.coin) }}>
-                    {block.coin}
-                  </div>
-                  <div>
-                    <div className="font-medium">كتلة #{block.height.toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground">{block.time}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-left">
-                    <div className="font-medium text-green-500">+{block.reward} {block.coin}</div>
-                    <div className="flex items-center gap-1">
-                      <Circle className={`w-2 h-2 ${getStatusColor(block.status)}`} />
-                      <span className="text-xs text-muted-foreground">
-                        {block.status === 'confirmed' ? 'مؤكدة' : block.status === 'pending' ? 'قيد التأكيد' : 'يتيمة'}
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
-  );
-}
-
-// =====================================================
-// مكون نشاط التعدين المباشر
-// =====================================================
-function LiveMiningActivity() {
-  const [activities, setActivities] = useState<Array<{
-    type: 'share' | 'block' | 'connect' | 'disconnect';
-    miner: string;
-    coin: string;
-    time: string;
-    hashrate?: string;
-  }>>([]);
-
-  useEffect(() => {
-    const activityTypes = ['share', 'share', 'share', 'share', 'connect', 'block'];
-    const coins = ['KAS', 'RVN', 'ZEPH', 'ALPH'];
-    
-    const interval = setInterval(() => {
-      const type = activityTypes[Math.floor(Math.random() * activityTypes.length)] as typeof activities[0]['type'];
-      const coin = coins[Math.floor(Math.random() * coins.length)];
-      const minerId = Math.random().toString(36).substring(2, 8).toUpperCase();
-      
-      const newActivity = {
-        type,
-        miner: `miner_${minerId}`,
-        coin,
-        time: new Date().toLocaleTimeString('ar-SA'),
-        hashrate: `${(Math.random() * 100).toFixed(2)} MH/s`
-      };
-      
-      setActivities(prev => [newActivity, ...prev].slice(0, 50));
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'share': return <Zap className="w-4 h-4 text-yellow-500" />;
-      case 'block': return <Box className="w-4 h-4 text-green-500" />;
-      case 'connect': return <ArrowUpRight className="w-4 h-4 text-blue-500" />;
-      case 'disconnect': return <ArrowDownRight className="w-4 h-4 text-red-500" />;
-      default: return <Circle className="w-4 h-4" />;
-    }
-  };
-
-  const getActivityText = (activity: typeof activities[0]) => {
-    switch (activity.type) {
-      case 'share': return `شار مقبول من ${activity.miner}`;
-      case 'block': return `كتلة جديدة بواسطة ${activity.miner}!`;
-      case 'connect': return `${activity.miner} متصل`;
-      case 'disconnect': return `${activity.miner} قطع الاتصال`;
-      default: return '';
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Activity className="w-5 h-5 animate-pulse text-green-500" />
-          نشاط التعدين المباشر
-        </CardTitle>
-        <CardDescription>تحديثات فورية من المعدنين</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[300px]">
-          <div className="space-y-2">
-            {activities.map((activity, index) => (
-              <div key={index} className="flex items-center gap-3 p-2 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors animate-pulse">
-                {getActivityIcon(activity.type)}
-                <div className="flex-1">
-                  <span className="text-sm">{getActivityText(activity)}</span>
-                  <Badge variant="outline" className="ml-2 text-xs">{activity.coin}</Badge>
-                </div>
-                <span className="text-xs text-muted-foreground">{activity.time}</span>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
-  );
-}
-
-// =====================================================
-// مكون تفاصيل الاتصال
-// =====================================================
-function ConnectionDetails() {
-  const connectionInfo = [
-    { coin: 'KAS', algorithm: 'kHeavyHash', port: 3333, host: 'stratum.yourpool.com', difficulty: '16384' },
-    { coin: 'RVN', algorithm: 'KawPoW', port: 3334, host: 'stratum.yourpool.com', difficulty: '0.5' },
-    { coin: 'ZEPH', algorithm: 'RandomX', port: 3335, host: 'stratum.yourpool.com', difficulty: '50000' },
-    { coin: 'ALPH', algorithm: 'Blake3', port: 3336, host: 'stratum.yourpool.com', difficulty: '1000' },
-  ];
-
-  const getCoinColor = (coin: string) => {
-    const colors: Record<string, string> = {
-      KAS: '#00D4AA',
-      RVN: '#B456BE',
-      ZEPH: '#1E88E5',
-      ALPH: '#FF6B35'
-    };
-    return colors[coin] || '#888';
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Network className="w-5 h-5" />
-          تفاصيل الاتصال (Stratum)
-        </CardTitle>
-        <CardDescription>استخدم هذه البيانات لتوصيل برنامج التعدين</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {connectionInfo.map((info) => (
-            <div key={info.coin} className="p-4 rounded-lg border-2" style={{ borderColor: getCoinColor(info.coin) + '40' }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                       style={{ backgroundColor: getCoinColor(info.coin) }}>
-                    {info.coin.slice(0, 2)}
-                  </div>
-                  <div>
-                    <div className="font-medium">{info.coin}</div>
-                    <div className="text-xs text-muted-foreground">{info.algorithm}</div>
-                  </div>
-                </div>
-                <Badge variant="outline">{info.port}</Badge>
-              </div>
-              <div className="bg-muted rounded p-2 font-mono text-sm">
-                <div className="text-muted-foreground"># أمر الاتصال:</div>
-                <div className="text-green-600">stratum+tcp://{info.host}:{info.port}</div>
-                <div className="text-muted-foreground mt-2"># مثال لـ T-Rex/BzMiner:</div>
-                <div className="text-blue-600">-o stratum+tcp://{info.host}:{info.port} -u WALLET_ADDRESS -p x</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// =====================================================
-// مكون المحافظ والمدفوعات
-// =====================================================
-function WalletInfo() {
-  const wallets = [
-    { coin: 'KAS', address: 'kaspa:qp0nl57r2t2mntlan756383khkukmjf8z7nstl066aqdr0xcjj8n54vstafuj', fee: '1%' },
-    { coin: 'RVN', address: 'REFRuSaC8iHeKMeUiMg3MEJUKfUD1hmv5Y', fee: '1%' },
-    { coin: 'ZEPH', address: 'سيتم إضافته لاحقاً', fee: '1%' },
-    { coin: 'ALPH', address: '1DJ5UX4BknPeDcwB9C3EzNGZcF9EBG5UdYAKdeWbDGz5b', fee: '1%' },
-  ];
-
-  const getCoinColor = (coin: string) => {
-    const colors: Record<string, string> = {
-      KAS: '#00D4AA',
-      RVN: '#B456BE',
-      ZEPH: '#1E88E5',
-      ALPH: '#FF6B35'
-    };
-    return colors[coin] || '#888';
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Wallet className="w-5 h-5" />
-          عناوين المحافظ (Pool Wallets)
-        </CardTitle>
-        <CardDescription>المحافظ المستخدمة لاستقبال رسوم الحوض</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {wallets.map((wallet) => (
-            <div key={wallet.coin} className="p-4 rounded-lg bg-muted/30">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs"
-                       style={{ backgroundColor: getCoinColor(wallet.coin) }}>
-                    {wallet.coin.slice(0, 1)}
-                  </div>
-                  <span className="font-medium">{wallet.coin}</span>
-                </div>
-                <Badge variant="outline">رسوم: {wallet.fee}</Badge>
-              </div>
-              <div className="bg-background rounded p-2 font-mono text-xs break-all border">
-                {wallet.address}
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// =====================================================
-// المكون الرئيسي
-// =====================================================
-export default function MiningPoolDashboard() {
-  const [poolData, setPoolData] = useState<PoolData | null>(null);
+export default function MiningPoolPage() {
+  const [stats, setStats] = useState<Stats>({
+    totalMiners: 0,
+    totalWorkers: 0,
+    totalBlocks24h: 0,
+    coins: {}
+  });
   const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [uptime, setUptime] = useState(0);
+  const [activeTab, setActiveTab] = useState('overview');
 
-  const fetchPoolStats = useCallback(async () => {
+  // جلب الإحصائيات
+  const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch('/api/pool/stats');
-      const data = await response.json();
-      setPoolData(data);
-      setLastUpdate(new Date());
-    } catch (error) {
-      console.error('Error fetching pool stats:', error);
+      const res = await fetch('/api/pool/stats');
+      if (res.ok) {
+        const data = await res.json();
+        setStats({
+          totalMiners: data.total?.totalMiners || 0,
+          totalWorkers: data.total?.totalWorkers || 0,
+          totalBlocks24h: data.total?.totalBlocks24h || 0,
+          coins: {
+            KAS: {
+              hashrate: data.kas?.poolHashrateFormatted || '0 H/s',
+              miners: data.kas?.activeMiners || 0,
+              workers: data.kas?.activeWorkers || 0,
+              blocks24h: data.kas?.blocksFound24h || 0,
+              difficulty: data.kas?.difficulty || 16384
+            },
+            RVN: {
+              hashrate: data.rvn?.poolHashrateFormatted || '0 H/s',
+              miners: data.rvn?.activeMiners || 0,
+              workers: data.rvn?.activeWorkers || 0,
+              blocks24h: data.rvn?.blocksFound24h || 0,
+              difficulty: data.rvn?.difficulty || 0.5
+            },
+            ZEPH: {
+              hashrate: data.zeph?.poolHashrateFormatted || '0 H/s',
+              miners: data.zeph?.activeMiners || 0,
+              workers: data.zeph?.activeWorkers || 0,
+              blocks24h: data.zeph?.blocksFound24h || 0,
+              difficulty: data.zeph?.difficulty || 50000
+            },
+            ALPH: {
+              hashrate: data.alph?.poolHashrateFormatted || '0 H/s',
+              miners: data.alph?.activeMiners || 0,
+              workers: data.alph?.activeWorkers || 0,
+              blocks24h: data.alph?.blocksFound24h || 0,
+              difficulty: data.alph?.difficulty || 1000
+            }
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Fetch error:', e);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Health check
+  const fetchHealth = useCallback(async () => {
+    try {
+      const res = await fetch('/api/health');
+      if (res.ok) {
+        const data = await res.json();
+        setUptime(data.uptime || 0);
+      }
+    } catch (e) {
+      console.error('Health error:', e);
+    }
+  }, []);
+
   useEffect(() => {
-    fetchPoolStats();
-    const interval = setInterval(fetchPoolStats, 10000); // تحديث كل 10 ثواني
+    fetchStats();
+    fetchHealth();
+    const interval = setInterval(() => {
+      fetchStats();
+      fetchHealth();
+    }, 10000);
     return () => clearInterval(interval);
-  }, [fetchPoolStats]);
+  }, [fetchStats, fetchHealth]);
+
+  const formatUptime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return `${h}س ${m}د`;
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* الهيدر */}
-      <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">MultiCoin Mining Pool</h1>
-                <p className="text-sm text-slate-400">حوض تعدين متعدد العملات</p>
-              </div>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
+      color: '#fff',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
+      {/* Header */}
+      <header style={{
+        background: 'rgba(0,0,0,0.3)',
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        padding: '1rem 2rem',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100
+      }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{
+              width: '50px',
+              height: '50px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px'
+            }}>
+              ⛏️
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-left hidden sm:block">
-                <div className="text-sm text-slate-400">آخر تحديث</div>
-                <div className="text-white font-mono">{lastUpdate.toLocaleTimeString('ar-SA')}</div>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-green-500/20 text-green-400">
-                <Circle className="w-2 h-2 fill-green-500 animate-pulse" />
-                <span className="text-sm">النظام نشط</span>
-              </div>
+            <div>
+              <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>MultiCoin Mining Pool</h1>
+              <p style={{ margin: 0, fontSize: '0.875rem', opacity: 0.7 }}>حوض تعدين متعدد العملات - 24/7</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>وقت التشغيل</div>
+              <div style={{ fontWeight: 'bold', color: '#4ade80' }}>{formatUptime(uptime)}</div>
+            </div>
+            <div style={{
+              padding: '0.5rem 1rem',
+              background: 'rgba(74, 222, 128, 0.2)',
+              borderRadius: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <span style={{
+                width: '8px',
+                height: '8px',
+                background: '#4ade80',
+                borderRadius: '50%',
+                animation: 'pulse 2s infinite'
+              }}></span>
+              <span style={{ fontSize: '0.875rem', color: '#4ade80' }}>نشط</span>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6">
-        {/* الإحصائيات العامة */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                  <Users className="w-6 h-6 text-blue-400" />
-                </div>
-                <div>
-                  <div className="text-sm text-slate-400">إجمالي المعدنين</div>
-                  <div className="text-2xl font-bold text-white">
-                    {loading ? '...' : (poolData?.total?.totalMiners || 0).toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                  <Cpu className="w-6 h-6 text-purple-400" />
-                </div>
-                <div>
-                  <div className="text-sm text-slate-400">إجمالي العمال</div>
-                  <div className="text-2xl font-bold text-white">
-                    {loading ? '...' : (poolData?.total?.totalWorkers || 0).toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
-                  <Box className="w-6 h-6 text-green-400" />
-                </div>
-                <div>
-                  <div className="text-sm text-slate-400">كتل 24 ساعة</div>
-                  <div className="text-2xl font-bold text-green-400">
-                    {loading ? '...' : poolData?.total?.totalBlocks24h || 0}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center">
-                  <Activity className="w-6 h-6 text-yellow-400" />
-                </div>
-                <div>
-                  <div className="text-sm text-slate-400">العملات النشطة</div>
-                  <div className="text-2xl font-bold text-yellow-400">4</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* التبويبات */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-slate-800/50 border border-slate-700">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600">نظرة عامة</TabsTrigger>
-            <TabsTrigger value="live" className="data-[state=active]:bg-blue-600">التعدين المباشر</TabsTrigger>
-            <TabsTrigger value="connection" className="data-[state=active]:bg-blue-600">الاتصال</TabsTrigger>
-            <TabsTrigger value="wallets" className="data-[state=active]:bg-blue-600">المحافظ</TabsTrigger>
-          </TabsList>
-
-          {/* تبويب النظرة العامة */}
-          <TabsContent value="overview">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {COINS.map((coin) => (
-                <CoinCard 
-                  key={coin.ticker} 
-                  coin={coin} 
-                  stats={poolData?.[coin.ticker.toLowerCase()] as CoinStats} 
-                />
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-              <BlockLog />
-              <WalletInfo />
-            </div>
-          </TabsContent>
-
-          {/* تبويب التعدين المباشر */}
-          <TabsContent value="live">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <LiveMiningActivity />
-              <BlockLog />
-            </div>
-          </TabsContent>
-
-          {/* تبويب الاتصال */}
-          <TabsContent value="connection">
-            <ConnectionDetails />
-          </TabsContent>
-
-          {/* تبويب المحافظ */}
-          <TabsContent value="wallets">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <WalletInfo />
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="w-5 h-5" />
-                    إعدادات الدفع
-                  </CardTitle>
-                  <CardDescription>حدود الدفع الأدنى لكل عملة</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      { coin: 'KAS', minPayout: '100 KAS', interval: 'كل ساعة' },
-                      { coin: 'RVN', minPayout: '10 RVN', interval: 'كل ساعة' },
-                      { coin: 'ZEPH', minPayout: '0.1 ZEPH', interval: 'كل ساعة' },
-                      { coin: 'ALPH', minPayout: '1 ALPH', interval: 'كل ساعة' },
-                    ].map((payout) => (
-                      <div key={payout.coin} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                        <div className="flex items-center gap-2">
-                          <Badge>{payout.coin}</Badge>
-                          <span className="text-muted-foreground">الحد الأدنى:</span>
-                          <span className="font-medium">{payout.minPayout}</span>
-                        </div>
-                        <span className="text-sm text-muted-foreground">{payout.interval}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </main>
-
-      {/* الفوتر */}
-      <footer className="border-t border-slate-700 bg-slate-900/50 mt-12">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="text-slate-400 text-sm">
-              © 2024 MultiCoin Mining Pool. جميع الحقوق محفوظة.
-            </div>
-            <div className="flex items-center gap-6 text-sm text-slate-400">
-              <span>الإصدار: 1.0.0</span>
-              <span>•</span>
-              <span>الخوارزميات: kHeavyHash, KawPoW, RandomX, Blake3</span>
+      {/* Stats Overview */}
+      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '1rem',
+          marginBottom: '2rem'
+        }}>
+          <div style={{
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <div style={{ fontSize: '0.875rem', opacity: 0.7, marginBottom: '0.5rem' }}>إجمالي المعدنين</div>
+            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#60a5fa' }}>
+              {loading ? '...' : stats.totalMiners.toLocaleString()}
             </div>
           </div>
+          <div style={{
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <div style={{ fontSize: '0.875rem', opacity: 0.7, marginBottom: '0.5rem' }}>إجمالي العمال</div>
+            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#a78bfa' }}>
+              {loading ? '...' : stats.totalWorkers.toLocaleString()}
+            </div>
+          </div>
+          <div style={{
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <div style={{ fontSize: '0.875rem', opacity: 0.7, marginBottom: '0.5rem' }}>كتل 24 ساعة</div>
+            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4ade80' }}>
+              {loading ? '...' : stats.totalBlocks24h}
+            </div>
+          </div>
+          <div style={{
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <div style={{ fontSize: '0.875rem', opacity: 0.7, marginBottom: '0.5rem' }}>العملات النشطة</div>
+            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fbbf24' }}>4</div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          {['overview', 'connection', 'wallets'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: activeTab === tab ? '#3b82f6' : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: activeTab === tab ? 'bold' : 'normal',
+                transition: 'all 0.2s'
+              }}
+            >
+              {tab === 'overview' ? '📊 نظرة عامة' : tab === 'connection' ? '🔌 الاتصال' : '💼 المحافظ'}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '1.5rem'
+          }}>
+            {COINS_DATA.map(coin => (
+              <div key={coin.ticker} style={{
+                background: 'rgba(255,255,255,0.05)',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                border: `2px solid ${coin.color}40`
+              }}>
+                <div style={{
+                  height: '4px',
+                  background: coin.color
+                }}></div>
+                <div style={{ padding: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                    <div style={{
+                      width: '50px',
+                      height: '50px',
+                      background: coin.color,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 'bold',
+                      fontSize: '1.25rem'
+                    }}>
+                      {coin.ticker.slice(0, 2)}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: '1.25rem', color: coin.color }}>{coin.name}</div>
+                      <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>{coin.algorithm} | منفذ: {coin.port}</div>
+                    </div>
+                  </div>
+                  
+                  <div style={{
+                    background: 'rgba(0,0,0,0.2)',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    marginBottom: '1rem'
+                  }}>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.7, marginBottom: '0.5rem' }}>معدل الهاش</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: coin.color }}>
+                      {stats.coins[coin.ticker]?.hashrate || '0 H/s'}
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div style={{ textAlign: 'center', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>المعدنين</div>
+                      <div style={{ fontWeight: 'bold' }}>{stats.coins[coin.ticker]?.miners || 0}</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>العمال</div>
+                      <div style={{ fontWeight: 'bold' }}>{stats.coins[coin.ticker]?.workers || 0}</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>كتل 24س</div>
+                      <div style={{ fontWeight: 'bold', color: '#4ade80' }}>{stats.coins[coin.ticker]?.blocks24h || 0}</div>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>الصعوبة</div>
+                      <div style={{ fontWeight: 'bold' }}>{stats.coins[coin.ticker]?.difficulty || '-'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'connection' && (
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            {COINS_DATA.map(coin => (
+              <div key={coin.ticker} style={{
+                background: 'rgba(255,255,255,0.05)',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                border: `2px solid ${coin.color}40`
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    background: coin.color,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold'
+                  }}>
+                    {coin.ticker.slice(0, 2)}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 'bold' }}>{coin.ticker} - {coin.name}</div>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>{coin.algorithm} | منفذ: {coin.port}</div>
+                  </div>
+                </div>
+                <div style={{
+                  background: '#000',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  fontFamily: 'monospace',
+                  fontSize: '0.875rem'
+                }}>
+                  <div style={{ color: '#888', marginBottom: '0.5rem' }}># أمر الاتصال:</div>
+                  <div style={{ color: '#4ade80' }}>stratum+tcp://stratum.yourpool.com:{coin.port}</div>
+                  <div style={{ color: '#888', margin: '0.5rem 0' }}># مثال:</div>
+                  <div style={{ color: '#60a5fa' }}>-o stratum+tcp://stratum.yourpool.com:{coin.port} -u WALLET_ADDRESS -p x</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'wallets' && (
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            {COINS_DATA.map(coin => (
+              <div key={coin.ticker} style={{
+                background: 'rgba(255,255,255,0.05)',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                border: `2px solid ${coin.color}40`
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    background: coin.color,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold'
+                  }}>
+                    {coin.ticker.slice(0, 1)}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 'bold' }}>{coin.ticker}</div>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>رسوم الحوض: 1%</div>
+                  </div>
+                </div>
+                <div style={{
+                  background: '#000',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  fontFamily: 'monospace',
+                  fontSize: '0.75rem',
+                  wordBreak: 'break-all',
+                  color: coin.wallet === 'TO_BE_ADDED' ? '#f87171' : '#4ade80'
+                }}>
+                  {coin.wallet}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer style={{
+        borderTop: '1px solid rgba(255,255,255,0.1)',
+        padding: '2rem',
+        textAlign: 'center',
+        opacity: 0.7,
+        fontSize: '0.875rem'
+      }}>
+        <div>© 2024 MultiCoin Mining Pool - الخوارزميات: kHeavyHash, KawPoW, RandomX, Blake3</div>
+        <div style={{ marginTop: '0.5rem' }}>
+          <span style={{ color: '#4ade80' }}>●</span> النظام يعمل 24/7 مع Keep-Alive
         </div>
       </footer>
+
+      <style jsx global>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
     </div>
   );
 }

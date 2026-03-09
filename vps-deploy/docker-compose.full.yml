@@ -1,0 +1,275 @@
+# =====================================================
+# 🐳 Docker Compose - Full Mining Stack
+# =====================================================
+#
+# يشمل:
+# - عقد كاملة لـ KAS, RVN, ALPH
+# - Redis للإحصائيات
+# - خادم التعدين
+# - مراقبة Prometheus/Grafana
+#
+# @author Senior Blockchain Architect
+# =====================================================
+
+version: '3.9'
+
+services:
+  # =====================================================
+  # 🗄️ Redis - الإحصائيات
+  # =====================================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: mining-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 4gb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mining-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # =====================================================
+  # ⛓️ Kaspa Full Node
+  # =====================================================
+  kaspad:
+    image: kaspanet/kaspad:v0.12.13
+    container_name: kaspad-node
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:16110:16110"   # RPC
+      - "16111:16111"             # P2P
+    volumes:
+      - kaspa_data:/app/data
+    command: >
+      kaspad
+      --listen=0.0.0.0:16111
+      --rpclisten=0.0.0.0:16110
+      --rpcuser=${KASPA_RPC_USER:-kaspa_rpc}
+      --rpcpass=${KASPA_RPC_PASS:-kaspa_secure_password}
+      --maxpeers=125
+      --enable-dnsseed
+      --logdir=/app/data/logs
+      --datadir=/app/data
+      --appdir=/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:16110/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    networks:
+      - mining-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # =====================================================
+  # ⛓️ Ravencoin Full Node
+  # =====================================================
+  ravend:
+    image: ravencoin/ravend:4.7.0
+    container_name: ravend-node
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8766:8766"     # RPC
+      - "8767:8767"               # P2P
+    volumes:
+      - raven_data:/root/.raven
+    command: >
+      ravend
+      -rpcuser=${RAVEN_RPC_USER:-raven_rpc}
+      -rpcpassword=${RAVEN_RPC_PASS:-raven_secure_password}
+      -rpcallowip=0.0.0.0/0
+      -rpcport=8766
+      -port=8767
+      -maxconnections=125
+      -listen=1
+      -server=1
+      -daemon=0
+      -txindex=1
+      -addrindex=1
+      -timestampindex=1
+      -spentindex=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "${RAVEN_RPC_USER:-raven_rpc}:${RAVEN_RPC_PASS:-raven_secure_password}", "-d", "{\"jsonrpc\":\"2.0\",\"method\":\"getblockchaininfo\",\"params\":[],\"id\":1}", "http://localhost:8766/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    networks:
+      - mining-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # =====================================================
+  # ⛓️ Alephium Full Node
+  # =====================================================
+  alephium:
+    image: alephium/alephium:v2.9.3
+    container_name: alephium-node
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:12973:12973"   # REST API
+      - "10973:10973"             # P2P
+    volumes:
+      - alephium_data:/alephium/data
+    environment:
+      - ALEPHIUM_API_INTERFACE=0.0.0.0
+      - ALEPHIUM_API_PORT=12973
+      - ALEPHIUM_P2P_INTERFACE=0.0.0.0
+      - ALEPHIUM_P2P_PORT=10973
+      - ALEPHIUM_P2P_DISCOVERY_BOOTSTRAP=true
+      - ALEPHIUM_P2P_MAX_PEERS=125
+      - ALEPHIUM_MINING=false
+      - ALEPHIUM_API_KEY=${ALEPHIUM_API_KEY:-alephium_api_key}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:12973/infos/chain"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    networks:
+      - mining-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # =====================================================
+  # ⛏️ Mining Pool Server
+  # =====================================================
+  mining-pool:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    container_name: mining-pool-server
+    restart: unless-stopped
+    ports:
+      - "10000:10000"             # Dashboard/API
+      - "3333:3333"               # KAS Stratum
+      - "3334:3334"               # RVN Stratum
+      - "3336:3336"               # ALPH Stratum
+    environment:
+      - NODE_ENV=production
+      - PORT=10000
+      - HOST=0.0.0.0
+      - REDIS_URL=redis://redis:6379
+      - KASPA_RPC_HOST=kaspad
+      - KASPA_RPC_PORT=16110
+      - KASPA_RPC_USER=${KASPA_RPC_USER:-kaspa_rpc}
+      - KASPA_RPC_PASS=${KASPA_RPC_PASS:-kaspa_secure_password}
+      - RAVEN_RPC_HOST=ravend
+      - RAVEN_RPC_PORT=8766
+      - RAVEN_RPC_USER=${RAVEN_RPC_USER:-raven_rpc}
+      - RAVEN_RPC_PASS=${RAVEN_RPC_PASS:-raven_secure_password}
+      - ALEPHIUM_API_HOST=alephium
+      - ALEPHIUM_API_PORT=12973
+      - ALEPHIUM_API_KEY=${ALEPHIUM_API_KEY:-alephium_api_key}
+      - KAS_WALLET=${KAS_WALLET}
+      - RVN_WALLET=${RVN_WALLET}
+      - ALPH_WALLET=${ALPH_WALLET}
+    depends_on:
+      redis:
+        condition: service_healthy
+      kaspad:
+        condition: service_healthy
+      ravend:
+        condition: service_healthy
+      alephium:
+        condition: service_healthy
+    networks:
+      - mining-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+  # =====================================================
+  # 📊 Prometheus (Monitoring)
+  # =====================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mining-prometheus
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - mining-network
+    profiles:
+      - monitoring
+
+  # =====================================================
+  # 📈 Grafana (Dashboard)
+  # =====================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mining-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/dashboards:/etc/grafana/provisioning/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASS:-admin}
+      - GF_INSTALL_PLUGINS=redis-datasource
+    depends_on:
+      - prometheus
+      - redis
+    networks:
+      - mining-network
+    profiles:
+      - monitoring
+
+# =====================================================
+# Networks
+# =====================================================
+networks:
+  mining-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# =====================================================
+# Volumes
+# =====================================================
+volumes:
+  redis_data:
+    driver: local
+  kaspa_data:
+    driver: local
+  raven_data:
+    driver: local
+  alephium_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

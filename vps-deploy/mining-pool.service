@@ -1,0 +1,30 @@
+[Unit]
+Description=MultiCoin Mining Pool Server
+After=network.target redis-server.service docker.service
+Wants=redis-server.service docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/mining-pool
+Environment="NODE_ENV=production"
+EnvironmentFile=/opt/mining-pool/.env
+ExecStart=/root/.bun/bin/bun run server.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mining-pool
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/mining-pool
+
+# Resource Limits
+LimitNOFILE=65536
+MemoryMax=4G
+
+[Install]
+WantedBy=multi-user.target

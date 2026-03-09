@@ -1,0 +1,244 @@
+# =====================================================
+# 🐳 Docker Compose - Full Production Stack
+# =====================================================
+#
+# هذا الملف يقوم بتشغيل:
+# - عقد Kaspa, Ravencoin, Alephium الكاملة
+# - Redis للإحصائيات
+# - خادم التعدين Pool
+# - لوحة التحكم Grafana
+#
+# @author Senior Blockchain Architect
+#
+# الاستخدام:
+# docker-compose up -d
+# =====================================================
+
+version: '3.9'
+
+services:
+  # =====================================================
+  # 🗄️ Redis - للإحصائيات والتخزين المؤقت
+  # =====================================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: mining-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mining-network
+
+  # =====================================================
+  # ⛓️ Kaspa Full Node (kHeavyHash)
+  # =====================================================
+  kaspad:
+    image: kaspanet/kaspad:latest
+    container_name: kaspad-node
+    restart: unless-stopped
+    ports:
+      - "16110:16110"   # RPC
+      - "16111:16111"   # P2P
+    volumes:
+      - kaspa_data:/app/data
+    command: >
+      kaspad
+      --listen=0.0.0.0:16111
+      --rpclisten=0.0.0.0:16110
+      --rpcuser=kaspa_rpc
+      --rpcpass=kaspa_secure_password_change_me
+      --maxpeers=125
+      --enable-dnsseed
+      --logdir=/app/data/logs
+      --datadir=/app/data
+      --appdir=/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:16110/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - mining-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # =====================================================
+  # ⛓️ Ravencoin Full Node (KawPoW)
+  # =====================================================
+  ravend:
+    image: ravencoin/ravend:latest
+    container_name: ravend-node
+    restart: unless-stopped
+    ports:
+      - "8766:8766"     # RPC
+      - "8767:8767"     # P2P Mainnet
+    volumes:
+      - raven_data:/root/.raven
+    command: >
+      ravend
+      -rpcuser=raven_rpc
+      -rpcpassword=raven_secure_password_change_me
+      -rpcallowip=0.0.0.0/0
+      -rpcport=8766
+      -port=8767
+      -maxconnections=125
+      -listen=1
+      -server=1
+      -daemon=0
+      -txindex=1
+      -addrindex=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "raven_rpc:raven_secure_password_change_me", "-d", "{\"jsonrpc\":\"2.0\",\"method\":\"getblockchaininfo\",\"params\":[],\"id\":1}", "http://localhost:8766/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    networks:
+      - mining-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # =====================================================
+  # ⛓️ Alephium Full Node (Blake3)
+  # =====================================================
+  alephium:
+    image: alephium/alephium:latest
+    container_name: alephium-node
+    restart: unless-stopped
+    ports:
+      - "12973:12973"   # REST API
+      - "10973:10973"   # P2P
+    volumes:
+      - alephium_data:/alephium/data
+    environment:
+      - ALEPHIUM_API_INTERFACE=0.0.0.0
+      - ALEPHIUM_API_PORT=12973
+      - ALEPHIUM_P2P_INTERFACE=0.0.0.0
+      - ALEPHIUM_P2P_PORT=10973
+      - ALEPHIUM_P2P_DISCOVERY_BOOTSTRAP=true
+      - ALEPHIUM_P2P_MAX_PEERS=125
+      - ALEPHIUM_MINING=false
+      - ALEPHIUM_API_KEY=alephium_api_key_change_me
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:12973/infos/chain"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    networks:
+      - mining-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # =====================================================
+  # ⛏️ Mining Pool Server (Next.js App)
+  # =====================================================
+  mining-pool:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    container_name: mining-pool-server
+    restart: unless-stopped
+    ports:
+      - "10000:10000"   # Dashboard
+      - "3333:3333"     # KAS Stratum
+      - "3334:3334"     # RVN Stratum
+      - "3336:3336"     # ALPH Stratum
+    environment:
+      - NODE_ENV=production
+      - PORT=10000
+      - HOST=0.0.0.0
+      - REDIS_URL=redis://redis:6379
+      - KASPA_RPC_HOST=kaspad
+      - KASPA_RPC_PORT=16110
+      - KASPA_RPC_USER=kaspa_rpc
+      - KASPA_RPC_PASS=kaspa_secure_password_change_me
+      - RAVEN_RPC_HOST=ravend
+      - RAVEN_RPC_PORT=8766
+      - RAVEN_RPC_USER=raven_rpc
+      - RAVEN_RPC_PASS=raven_secure_password_change_me
+      - ALEPHIUM_API_HOST=alephium
+      - ALEPHIUM_API_PORT=12973
+      - ALEPHIUM_API_KEY=alephium_api_key_change_me
+      - KAS_WALLET=kaspa:qppxt0expwdg4vra08709ancu4t5stldmc3hdfm4xdschq3whvvqwnr9y7v86
+      - RVN_WALLET=REFRuSaC8iHeKMeUiMg3MEJUKfUD1hmv5Y
+      - ALPH_WALLET=1DJ5UX4BknPeDcwB9C3EzNGZcF9EBG5UdYAKdeWbDGz5b
+    depends_on:
+      redis:
+        condition: service_healthy
+      kaspad:
+        condition: service_healthy
+      ravend:
+        condition: service_healthy
+      alephium:
+        condition: service_healthy
+    networks:
+      - mining-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # =====================================================
+  # 📊 Grafana Dashboard (Optional)
+  # =====================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mining-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin_password_change_me
+      - GF_INSTALL_PLUGINS=redis-datasource
+    depends_on:
+      - redis
+    networks:
+      - mining-network
+
+# =====================================================
+# Networks
+# =====================================================
+networks:
+  mining-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# =====================================================
+# Volumes
+# =====================================================
+volumes:
+  redis_data:
+    driver: local
+  kaspa_data:
+    driver: local
+  raven_data:
+    driver: local
+  alephium_data:
+    driver: local
+  grafana_data:
+    driver: local

@@ -1,6 +1,18 @@
+# =====================================================
+# 🚀 Render.com Deployment Configuration
+# =====================================================
+#
+# هذا الملف يقوم بنشر حوض التعدين على Render.com
+# يتضمن:
+# - Web Service للوحة التحكم والـ API
+# - Redis للإحصائيات
+#
+# @author Senior Blockchain Architect
+# =====================================================
+
 services:
   # =====================================================
-  # Web Service - لوحة التحكم والـ API
+  # ⛏️ Mining Pool Web Service
   # =====================================================
   - type: web
     name: multicoin-mining-pool
@@ -8,19 +20,69 @@ services:
     region: oregon
     plan: free
     branch: main
-    repo: https://github.com/yayass3r/multicoin-mining-pool.git
-    buildCommand: npm install && npm run build
-    startCommand: node server.js
+    buildCommand: bun install && bun run build
+    startCommand: bun run server.js
     healthCheckPath: /api/health
+    
+    # Environment Variables
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
-      - key: KEEP_ALIVE_URL
+      - key: KAS_WALLET
+        value: kaspa:qppxt0expwdg4vra08709ancu4t5stldmc3hdfm4xdschq3whvvqwnr9y7v86
+      - key: RVN_WALLET
+        value: REFRuSaC8iHeKMeUiMg3MEJUKfUD1hmv5Y
+      - key: ALPH_WALLET
+        value: 1DJ5UX4BknPeDcwB9C3EzNGZcF9EBG5UdYAKdeWbDGz5b
+      - key: KASPA_RPC_HOST
+        value: 127.0.0.1
+      - key: KASPA_RPC_PORT
+        value: 16110
+      - key: RAVEN_RPC_HOST
+        value: 127.0.0.1
+      - key: RAVEN_RPC_PORT
+        value: 8766
+      - key: ALEPHIUM_API_HOST
+        value: 127.0.0.1
+      - key: ALEPHIUM_API_PORT
+        value: 12973
+      - key: REDIS_URL
         fromService:
-          type: web
-          name: multicoin-mining-pool
-          property: url
+          type: redis
+          name: mining-redis
+          property: connectionString
+
+    # Auto-deploy on git push
     autoDeploy: true
-    numInstances: 1
+
+    # Disk storage (if needed)
+    disk:
+      name: mining-data
+      mountPath: /opt/render/project/data
+      sizeGB: 1
+
+  # =====================================================
+  # 🗄️ Redis Instance
+  # =====================================================
+  - type: redis
+    name: mining-redis
+    region: oregon
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+
+# =====================================================
+# المتغيرات العامة
+# =====================================================
+envVarGroups:
+  - name: pool-settings
+    envVars:
+      - key: POOL_FEE
+        value: "1.0"
+      - key: MIN_PAYOUT_KAS
+        value: "1.0"
+      - key: MIN_PAYOUT_RVN
+        value: "10.0"
+      - key: MIN_PAYOUT_ALPH
+        value: "0.5"

@@ -1,0 +1,232 @@
+// =====================================================
+// 🌐 Kaspa RPC Protocol Buffer Definition
+// =====================================================
+// 
+// هذا الملف يحدد واجهة gRPC للتواصل مع Kaspa Node
+// 
+// المصدر الرسمي: https://github.com/kaspanet/kaspad/protowire
+// =====================================================
+
+syntax = "proto3";
+
+package kaspad;
+
+// =====================================================
+// RPC Service
+// =====================================================
+
+service RPC {
+    // معلومات الشبكة
+    rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+    rpc GetBlockDagInfo(GetBlockDagInfoRequest) returns (GetBlockDagInfoResponse);
+    
+    // قوالب الكتل
+    rpc GetBlockTemplate(GetBlockTemplateRequest) returns (GetBlockTemplateResponse);
+    rpc SubmitBlock(SubmitBlockRequest) returns (SubmitBlockResponse);
+    
+    // معاملات
+    rpc GetBlock(GetBlockRequest) returns (GetBlockResponse);
+    rpc GetBlocks(GetBlocksRequest) returns (GetBlocksResponse);
+    
+    // المحافظ
+    rpc GetBalancesByAddresses(GetBalancesByAddressesRequest) returns (GetBalancesByAddressesResponse);
+    
+    // الشبكة
+    rpc GetConnectedPeerInfo(GetConnectedPeerInfoRequest) returns (GetConnectedPeerInfoResponse);
+    rpc AddPeer(AddPeerRequest) returns (AddPeerResponse);
+    
+    // إدارة
+    rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
+}
+
+// =====================================================
+// Messages - معلومات الشبكة
+// =====================================================
+
+message GetInfoRequest {}
+
+message GetInfoResponse {
+    uint32 version = 1;
+    string protocol_version = 2;
+    uint64 services = 3;
+    int64 time_offset = 4;
+    uint32 connections = 5;
+    bool is_synced = 6;
+    string network_name = 7;
+    uint64 difficulty = 8;
+    uint32 bits = 9;
+    double sync_progress = 10;
+}
+
+message GetBlockDagInfoRequest {}
+
+message GetBlockDagInfoResponse {
+    string network_name = 1;
+    uint64 block_count = 2;
+    uint64 header_count = 3;
+    uint64 tip_hashes = 4;
+    double difficulty = 5;
+    int64 past_median_time = 6;
+    repeated string virtual_parent_hashes = 7;
+    repeated string pruning_point_hash = 8;
+    uint64 daa_score = 9;
+}
+
+// =====================================================
+// Messages - قوالب الكتل
+// =====================================================
+
+message GetBlockTemplateRequest {
+    string pay_address = 1;        // عنوان استلام المكافأة
+    bytes extra_data = 2;          // بيانات إضافية
+}
+
+message GetBlockTemplateResponse {
+    RpcBlock block = 1;
+    bool is_synced = 2;
+    repeated string selected_parent_hashes = 3;
+}
+
+message SubmitBlockRequest {
+    RpcBlock block = 1;
+}
+
+message SubmitBlockResponse {
+    bool accepted = 1;
+    string reject_reason = 2;
+}
+
+// =====================================================
+// Messages - الكتل
+// =====================================================
+
+message RpcBlock {
+    RpcBlockHeader header = 1;
+    repeated RpcTransaction transactions = 2;
+    RpcBlockVerboseData verbose_data = 3;
+}
+
+message RpcBlockHeader {
+    uint32 version = 1;
+    repeated string parents = 2;
+    string hash_merkle_root = 3;
+    string accepted_id_merkle_root = 4;
+    string utxo_commitment = 5;
+    int64 timestamp = 6;
+    uint32 bits = 7;
+    uint64 nonce = 8;
+    uint64 daa_score = 9;
+    string hash = 10;
+}
+
+message RpcTransaction {
+    uint32 version = 1;
+    repeated RpcTransactionInput inputs = 2;
+    repeated RpcTransactionOutput outputs = 3;
+    uint64 lock_time = 4;
+    string subnetwork_id = 5;
+    uint64 gas = 6;
+    bytes payload = 7;
+    string transaction_id = 8;
+}
+
+message RpcTransactionInput {
+    RpcOutpoint previous_outpoint = 1;
+    bytes signature_script = 2;
+    uint64 sequence = 3;
+}
+
+message RpcTransactionOutput {
+    uint64 amount = 1;
+    string script_public_key = 2;
+}
+
+message RpcOutpoint {
+    string transaction_id = 1;
+    uint32 index = 2;
+}
+
+message RpcBlockVerboseData {
+    string hash = 1;
+    double difficulty = 2;
+    uint64 blue_score = 3;
+    bool is_chain_block = 4;
+}
+
+// =====================================================
+// Messages - المحافظ
+// =====================================================
+
+message GetBalancesByAddressesRequest {
+    repeated string addresses = 1;
+}
+
+message GetBalancesByAddressesResponse {
+    repeated AddressesBalancesEntry entries = 1;
+}
+
+message AddressesBalancesEntry {
+    string address = 1;
+    uint64 available = 2;
+    uint64 pending = 3;
+    uint64 total = 4;
+}
+
+// =====================================================
+// Messages - الشبكة
+// =====================================================
+
+message GetConnectedPeerInfoRequest {}
+
+message GetConnectedPeerInfoResponse {
+    repeated ConnectedPeerInfo infos = 1;
+}
+
+message ConnectedPeerInfo {
+    string id = 1;
+    string address = 2;
+    uint64 services = 3;
+    int64 time_offset = 4;
+    uint64 connection_time = 5;
+    bool is_outbound = 6;
+    uint64 last_block_daa_score = 7;
+}
+
+message AddPeerRequest {
+    string peer_address = 1;
+    bool is_permanent = 2;
+}
+
+message AddPeerResponse {}
+
+// =====================================================
+// Messages - إدارة
+// =====================================================
+
+message ShutdownRequest {}
+
+message ShutdownResponse {}
+
+// =====================================================
+// Messages - GetBlock
+// =====================================================
+
+message GetBlockRequest {
+    string hash = 1;
+    bool include_transactions = 2;
+}
+
+message GetBlockResponse {
+    RpcBlock block = 1;
+}
+
+message GetBlocksRequest {
+    string low_hash = 1;
+    bool include_blocks = 2;
+    bool include_transaction_ids = 3;
+}
+
+message GetBlocksResponse {
+    repeated string block_hashes = 1;
+    repeated RpcBlock blocks = 2;
+}

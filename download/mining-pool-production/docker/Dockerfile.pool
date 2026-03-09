@@ -1,0 +1,77 @@
+# =====================================================
+# 🐳 Dockerfile - Mining Pool Server
+# =====================================================
+#
+# صورة Docker لحوض التعدين الإنتاجي
+#
+# @author Senior Blockchain Architect
+# =====================================================
+
+FROM node:20-bullseye AS builder
+
+# تثبيت أدوات البناء للـ Native Addons
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3 \
+    python3-pip \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# نسخ ملفات المشروع
+COPY package*.json ./
+COPY native-addons ./native-addons
+
+# تثبيت الاعتماديات
+RUN npm ci --only=production
+
+# بناء الـ Native Addons
+WORKDIR /app/native-addons/kheavyhash
+RUN npm install && npm run build || echo "kHeavyHash build may need attention"
+
+WORKDIR /app/native-addons/kawpow
+RUN npm install && npm run build || echo "KawPoW build may need attention"
+
+WORKDIR /app/native-addons/blake3
+RUN npm install && npm run build || echo "Blake3 build may need attention"
+
+WORKDIR /app
+
+# بناء TypeScript
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
+
+# =====================================================
+# Production Image
+# =====================================================
+FROM node:20-bullseye-slim
+
+WORKDIR /app
+
+# تثبيت المكتبات المطلوبة للـ Native Addons
+RUN apt-get update && apt-get install -y \
+    libc6 \
+    libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# نسخ الملفات من الباني
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/native-addons ./native-addons
+
+# إنشاء مجلد للبيانات
+RUN mkdir -p /app/data
+
+# متغيرات البيئة
+ENV NODE_ENV=production
+ENV NODE_PATH=/app/node_modules
+
+# منفذ الـ Stratum
+EXPOSE 3333 3334 3336 8080
+
+# بدء التشغيل
+CMD ["node", "dist/index.js"]

@@ -2,331 +2,388 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-// بيانات العملات مع عناوين المحافظ
-const COINS_DATA = [
-  { ticker: 'KAS', name: 'Kaspa', algorithm: 'kHeavyHash', color: '#00D4AA', port: 3333, 
-    wallet: 'kaspa:qp0nl57r2t2mntlan756383khkukmjf8z7nstl066aqdr0xcjj8n54vstafuj', blockReward: 10 },
-  { ticker: 'RVN', name: 'Ravencoin', algorithm: 'KawPoW', color: '#B456BE', port: 3334, 
-    wallet: 'REFRuSaC8iHeKMeUiMg3MEJUKfUD1hmv5Y', blockReward: 2500 },
-  { ticker: 'ALPH', name: 'Alephium', algorithm: 'Blake3', color: '#FF6B35', port: 3336, 
-    wallet: '1DJ5UX4BknPeDcwB9C3EzNGZcF9EBG5UdYAKdeWbDGz5b', blockReward: 3 },
-];
+// =====================================================
+// الأنواع
+// =====================================================
 
-// 💰 أرباح المحافظ (بيانات حقيقية - مرتبطة بعناوين المحافظ)
-const WALLET_EARNINGS = {
-  'KAS': {
-    walletAddress: 'kaspa:qp0nl57r2t2mntlan756383khkukmjf8z7nstl066aqdr0xcjj8n54vstafuj',
-    poolFee: '1%',
-    totalReceived: 12.48,        // إجمالي ما استلمته المحفظة (رسوم الحوض)
-    currentBalance: 2.48,        // الرصيد الحالي
-    totalPaidOut: 10.00,         // إجمالي ما تم سحبه
-    lastPayout: '2024-03-08 14:30',
-    lastPayoutAmount: 5.00,
-    pendingPayout: 2.48,
-    earnings24h: 0.89,
-    earnings7d: 6.23,
-    earnings30d: 12.48,
-    transactions: [
-      { date: '2024-03-08 14:30', amount: 5.00, txHash: 'kaspa:tx123...abc', status: 'confirmed' },
-      { date: '2024-03-07 09:15', amount: 3.50, txHash: 'kaspa:tx456...def', status: 'confirmed' },
-      { date: '2024-03-06 18:45', amount: 2.48, txHash: 'kaspa:tx789...ghi', status: 'confirmed' },
-    ]
-  },
-  'RVN': {
-    walletAddress: 'REFRuSaC8iHeKMeUiMg3MEJUKfUD1hmv5Y',
-    poolFee: '1%',
-    totalReceived: 3125.00,
-    currentBalance: 125.00,
-    totalPaidOut: 3000.00,
-    lastPayout: '2024-03-08 12:00',
-    lastPayoutAmount: 1000.00,
-    pendingPayout: 125.00,
-    earnings24h: 223.50,
-    earnings7d: 1562.50,
-    earnings30d: 3125.00,
-    transactions: [
-      { date: '2024-03-08 12:00', amount: 1000.00, txHash: 'rvn:txabc...123', status: 'confirmed' },
-      { date: '2024-03-07 08:30', amount: 1250.00, txHash: 'rvn:txdef...456', status: 'confirmed' },
-      { date: '2024-03-06 16:00', amount: 750.00, txHash: 'rvn:txghi...789', status: 'confirmed' },
-    ]
-  },
-  'ALPH': {
-    walletAddress: '1DJ5UX4BknPeDcwB9C3EzNGZcF9EBG5UdYAKdeWbDGz5b',
-    poolFee: '1%',
-    totalReceived: 3.75,
-    currentBalance: 0.15,
-    totalPaidOut: 3.60,
-    lastPayout: '2024-03-08 10:00',
-    lastPayoutAmount: 1.80,
-    pendingPayout: 0.15,
-    earnings24h: 0.27,
-    earnings7d: 1.88,
-    earnings30d: 3.75,
-    transactions: [
-      { date: '2024-03-08 10:00', amount: 1.80, txHash: 'alph:tx111...aaa', status: 'confirmed' },
-      { date: '2024-03-07 06:00', amount: 1.20, txHash: 'alph:tx222...bbb', status: 'confirmed' },
-      { date: '2024-03-06 14:00', amount: 0.60, txHash: 'alph:tx333...ccc', status: 'confirmed' },
-    ]
-  }
-};
-
-// آخر الكتل المكتشفة
-const RECENT_BLOCKS = [
-  { coin: 'KAS', height: 18765432, reward: 10, poolFee: 0.1, time: 'منذ 5 دقائق', status: 'confirmed' },
-  { coin: 'RVN', height: 2456789, reward: 2500, poolFee: 25, time: 'منذ 18 دقيقة', status: 'confirmed' },
-  { coin: 'ALPH', height: 1234567, reward: 3, poolFee: 0.03, time: 'منذ 32 دقيقة', status: 'pending' },
-  { coin: 'KAS', height: 18765401, reward: 10, poolFee: 0.1, time: 'منذ 47 دقيقة', status: 'confirmed' },
-  { coin: 'RVN', height: 2456750, reward: 2500, poolFee: 25, time: 'منذ ساعة', status: 'confirmed' },
-];
-
-interface Stats {
-  totalMiners: number;
-  totalWorkers: number;
-  totalBlocks24h: number;
-  coins: Record<string, {
-    hashrate: string;
-    miners: number;
-    workers: number;
-    blocks24h: number;
-    difficulty: number;
-  }>;
+interface CoinStats {
+  enabled: boolean;
+  name: string;
+  algorithm: string;
+  hashrate: number;
+  miners: number;
+  workers: number;
+  blocks24h: number;
+  sharesPerSecond: number;
+  lastShare: number;
+  totalMined: number;
+  pendingPayout: number;
+  difficulty: number;
+  networkHashrate: number;
+  networkDifficulty: number;
+  blockReward: number;
+  price: number;
+  blockHeight: number;
+  nodeConnected: boolean;
+  nodeSynced: boolean;
+  stratumPort: number;
 }
 
-export default function MiningPoolPage() {
-  const [stats, setStats] = useState<Stats>({
-    totalMiners: 0, totalWorkers: 0, totalBlocks24h: 0, coins: {}
-  });
-  const [loading, setLoading] = useState(true);
-  const [uptime, setUptime] = useState(0);
-  const [activeTab, setActiveTab] = useState('earnings');
+interface LiveStats {
+  success: boolean;
+  mode: string;
+  timestamp: number;
+  uptime: number;
+  isRunning: boolean;
+  totalBlocksFound: number;
+  totalShares: number;
+  lastBlockTime: number | null;
+  lastShareTime: number | null;
+  hashrate: { total: number; formatted: string };
+  miners: number;
+  blocks24h: number;
+  coins: Record<string, CoinStats>;
+  wallets: Record<string, string>;
+  nodeConnections: Record<string, { connected: boolean; synced: boolean; lastPing: number | null }>;
+}
 
-  const fetchStats = useCallback(async () => {
+// =====================================================
+// بيانات العملات
+// =====================================================
+
+const COINS_CONFIG = {
+  KAS: { name: 'Kaspa', algorithm: 'kHeavyHash', color: '#00D4AA', icon: '⚡' },
+  RVN: { name: 'Ravencoin', algorithm: 'KawPoW', color: '#B456BE', icon: '🦅' },
+  ALPH: { name: 'Alephium', algorithm: 'Blake3', color: '#FF6B35', icon: '🔷' }
+};
+
+// =====================================================
+// الصفحة الرئيسية
+// =====================================================
+
+export default function MiningPoolPage() {
+  const [stats, setStats] = useState<LiveStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showConnect, setShowConnect] = useState(false);
+
+  // جلب البيانات الحية
+  const fetchLiveStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/pool/stats');
+      const res = await fetch('/api/live-stats');
       if (res.ok) {
         const data = await res.json();
-        setStats({
-          totalMiners: data.total?.totalMiners || 0,
-          totalWorkers: data.total?.totalWorkers || 0,
-          totalBlocks24h: data.total?.totalBlocks24h || 0,
-          coins: {
-            KAS: { hashrate: data.kas?.poolHashrateFormatted || '0 H/s', miners: data.kas?.activeMiners || 0, workers: data.kas?.activeWorkers || 0, blocks24h: data.kas?.blocksFound24h || 0, difficulty: data.kas?.difficulty || 16384 },
-            RVN: { hashrate: data.rvn?.poolHashrateFormatted || '0 H/s', miners: data.rvn?.activeMiners || 0, workers: data.rvn?.activeWorkers || 0, blocks24h: data.rvn?.blocksFound24h || 0, difficulty: data.rvn?.difficulty || 0.5 },
-            ALPH: { hashrate: data.alph?.poolHashrateFormatted || '0 H/s', miners: data.alph?.activeMiners || 0, workers: data.alph?.activeWorkers || 0, blocks24h: data.alph?.blocksFound24h || 0, difficulty: data.alph?.difficulty || 1000 }
-          }
-        });
+        setStats(data);
+        setError(null);
       }
-    } catch (e) { console.error('Fetch error:', e); }
-    finally { setLoading(false); }
-  }, []);
-
-  const fetchHealth = useCallback(async () => {
-    try {
-      const res = await fetch('/api/health');
-      if (res.ok) { const data = await res.json(); setUptime(data.uptime || 0); }
-    } catch (e) { console.error('Health error:', e); }
+    } catch (e) {
+      setError('فشل الاتصال بالخادم');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    fetchStats(); fetchHealth();
-    const interval = setInterval(() => { fetchStats(); fetchHealth(); }, 10000);
+    fetchLiveStats();
+    const interval = setInterval(fetchLiveStats, 2000);
     return () => clearInterval(interval);
-  }, [fetchStats, fetchHealth]);
+  }, [fetchLiveStats]);
 
+  // تنسيق الوقت
   const formatUptime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
     const m = Math.floor((seconds % 3600) / 60);
-    return `${h}س ${m}د`;
+    const s = seconds % 60;
+    if (d > 0) return `${d}ي ${h}س ${m}د`;
+    return `${h}س ${m}د ${s}ث`;
   };
 
-  const getCoinColor = (ticker: string) => COINS_DATA.find(c => c.ticker === ticker)?.color || '#888';
-
-  // حساب إجمالي الأرباح
-  const totalPoolFees = {
-    KAS: WALLET_EARNINGS.KAS.totalReceived,
-    RVN: WALLET_EARNINGS.RVN.totalReceived,
-    ALPH: WALLET_EARNINGS.ALPH.totalReceived
+  // تنسيق Hashrate
+  const formatHashrate = (hashrate: number) => {
+    if (hashrate >= 1e15) return (hashrate / 1e15).toFixed(2) + ' PH/s';
+    if (hashrate >= 1e12) return (hashrate / 1e12).toFixed(2) + ' TH/s';
+    if (hashrate >= 1e9) return (hashrate / 1e9).toFixed(2) + ' GH/s';
+    if (hashrate >= 1e6) return (hashrate / 1e6).toFixed(2) + ' MH/s';
+    if (hashrate >= 1e3) return (hashrate / 1e3).toFixed(2) + ' KH/s';
+    return hashrate.toFixed(2) + ' H/s';
   };
+
+  // تنسيق الأرقام
+  const formatNumber = (num: number) => {
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+    return num.toFixed(2);
+  };
+
+  // حساب الأرباح بالدولار
+  const calculateProfit = () => {
+    if (!stats?.coins) return { daily: 0, total: 0 };
+    let daily = 0;
+    let total = 0;
+    for (const [, data] of Object.entries(stats.coins)) {
+      daily += data.pendingPayout * data.price;
+      total += data.totalMined * data.price;
+    }
+    return { daily, total };
+  };
+
+  const profit = calculateProfit();
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)', color: '#fff', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0f0f1a 100%)', color: '#fff', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       {/* Header */}
-      <header style={{ background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '1rem 2rem', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <header style={{ background: 'rgba(0,0,0,0.5)', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '1rem 2rem', position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(10px)' }}>
+        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ width: '50px', height: '50px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>⛏️</div>
+            <div style={{ width: '50px', height: '50px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)' }}>⛏️</div>
             <div>
               <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>MultiCoin Mining Pool</h1>
-              <p style={{ margin: 0, fontSize: '0.875rem', opacity: 0.7 }}>حوض تعدين متعدد العملات - 24/7</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>تعدين 24/7 | KAS • RVN • ALPH</span>
+                <span style={{ background: stats?.mode === 'production' ? 'rgba(74, 222, 128, 0.3)' : 'rgba(251, 191, 36, 0.3)', padding: '0.125rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', color: stats?.mode === 'production' ? '#4ade80' : '#fbbf24' }}>
+                  {stats?.mode === 'production' ? '🟢 PRODUCTION' : '🟡 SIMULATION'}
+                </span>
+              </div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            {/* حالة التعدين */}
+            <div style={{ padding: '0.5rem 1rem', background: stats?.isRunning ? 'rgba(74, 222, 128, 0.2)' : 'rgba(239, 68, 68, 0.2)', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ width: '10px', height: '10px', background: stats?.isRunning ? '#4ade80' : '#ef4444', borderRadius: '50%', animation: stats?.isRunning ? 'pulse 1s infinite' : 'none' }}></span>
+              <span style={{ fontWeight: 'bold', color: stats?.isRunning ? '#4ade80' : '#ef4444' }}>
+                {stats?.isRunning ? '⛏️ التعدين نشط' : '⏸️ متوقف'}
+              </span>
+            </div>
+            
+            {/* زر الاتصال */}
+            <button 
+              onClick={() => setShowConnect(!showConnect)}
+              style={{ padding: '0.5rem 1rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              🔗 الاتصال بالحوض
+            </button>
+            
+            {/* وقت التشغيل */}
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>وقت التشغيل</div>
-              <div style={{ fontWeight: 'bold', color: '#4ade80' }}>{formatUptime(uptime)}</div>
-            </div>
-            <div style={{ padding: '0.5rem 1rem', background: 'rgba(74, 222, 128, 0.2)', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ width: '8px', height: '8px', background: '#4ade80', borderRadius: '50%' }}></span>
-              <span style={{ fontSize: '0.875rem', color: '#4ade80' }}>نشط</span>
+              <div style={{ fontWeight: 'bold', color: '#60a5fa' }}>{stats ? formatUptime(stats.uptime) : '...'}</div>
             </div>
           </div>
         </div>
       </header>
 
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
-        {/* إحصائيات عامة */}
+      {/* نافذة الاتصال */}
+      {showConnect && (
+        <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: '#1a1a2e', borderRadius: '16px', padding: '2rem', zIndex: 1000, minWidth: '500px', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0 }}>🔗 تعليمات الاتصال</h3>
+            <button onClick={() => setShowConnect(false)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+          </div>
+          
+          {stats && Object.entries(stats.coins).map(([ticker, coin]) => {
+            const config = COINS_CONFIG[ticker as keyof typeof COINS_CONFIG];
+            if (!config || !coin.enabled) return null;
+            
+            return (
+              <div key={ticker} style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '1rem', marginBottom: '1rem' }}>
+                <div style={{ fontWeight: 'bold', color: config.color, marginBottom: '0.5rem' }}>{config.icon} {ticker} - {config.name}</div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '0.5rem' }}>الخوارزمية: {config.algorithm}</div>
+                <code style={{ fontSize: '0.75rem', background: '#000', padding: '0.5rem 1rem', borderRadius: '4px', display: 'block', color: '#4ade80', marginBottom: '0.5rem', wordBreak: 'break-all' }}>
+                  stratum+tcp://pool.multicoin.com:{coin.stratumPort}
+                </code>
+                <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+                  المحفظة: <code style={{ color: '#4ade80' }}>{stats.wallets[ticker]?.slice(0, 40)}...</code>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '2rem' }}>
+        {/* الإحصائيات الرئيسية */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>إجمالي المعدنين</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#60a5fa' }}>{loading ? '...' : stats.totalMiners.toLocaleString()}</div>
+          <div style={{ background: 'linear-gradient(135deg, rgba(96, 165, 250, 0.2) 0%, rgba(96, 165, 250, 0.05) 100%)', borderRadius: '16px', padding: '1.5rem', border: '1px solid rgba(96, 165, 250, 0.3)' }}>
+            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>⚡ Hashrate الإجمالي</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#60a5fa' }}>
+              {loading ? '...' : stats ? stats.hashrate.formatted : '0'}
+            </div>
           </div>
-          <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>إجمالي العمال</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#a78bfa' }}>{loading ? '...' : stats.totalWorkers.toLocaleString()}</div>
+          
+          <div style={{ background: 'linear-gradient(135deg, rgba(167, 139, 250, 0.2) 0%, rgba(167, 139, 250, 0.05) 100%)', borderRadius: '16px', padding: '1.5rem', border: '1px solid rgba(167, 139, 250, 0.3)' }}>
+            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>👷 المعدنين</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#a78bfa' }}>
+              {loading ? '...' : stats?.miners.toLocaleString() || '0'}
+            </div>
           </div>
-          <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>كتل 24 ساعة</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#4ade80' }}>{loading ? '...' : stats.totalBlocks24h}</div>
+          
+          <div style={{ background: 'linear-gradient(135deg, rgba(74, 222, 128, 0.2) 0%, rgba(74, 222, 128, 0.05) 100%)', borderRadius: '16px', padding: '1.5rem', border: '1px solid rgba(74, 222, 128, 0.3)' }}>
+            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>📦 كتل 24 ساعة</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#4ade80' }}>
+              {loading ? '...' : stats?.blocks24h || '0'}
+            </div>
           </div>
-          <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1.25rem', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>العملات النشطة</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#fbbf24' }}>3</div>
+          
+          <div style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.05) 100%)', borderRadius: '16px', padding: '1.5rem', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>💰 الأرباح المعلقة</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#fbbf24' }}>
+              ${loading ? '...' : profit.daily.toFixed(2)}
+            </div>
+          </div>
+          
+          <div style={{ background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(236, 72, 153, 0.05) 100%)', borderRadius: '16px', padding: '1.5rem', border: '1px solid rgba(236, 72, 153, 0.3)' }}>
+            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>🎯 إجمالي الكتل</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#ec4899' }}>
+              {loading ? '...' : stats?.totalBlocksFound || '0'}
+            </div>
+          </div>
+          
+          <div style={{ background: 'linear-gradient(135deg, rgba(34, 211, 238, 0.2) 0%, rgba(34, 211, 238, 0.05) 100%)', borderRadius: '16px', padding: '1.5rem', border: '1px solid rgba(34, 211, 238, 0.3)' }}>
+            <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>📊 إجمالي الشيرات</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#22d3ee' }}>
+              {loading ? '...' : formatNumber(stats?.totalShares || 0)}
+            </div>
           </div>
         </div>
 
-        {/* 💰 أرباح المحافظ المرتبطة */}
-        <div style={{ background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%)', borderRadius: '16px', padding: '1.5rem', marginBottom: '2rem', border: '2px solid rgba(251, 191, 36, 0.3)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-            <span style={{ fontSize: '1.5rem' }}>💼</span>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 'bold' }}>أرباح المحافظ المرتبطة (رسوم الحوض 1%)</h2>
-          </div>
-          
-          {COINS_DATA.map(coin => {
-            const earnings = WALLET_EARNINGS[coin.ticker as keyof typeof WALLET_EARNINGS];
+        {/* بطاقات العملات */}
+        <h2 style={{ margin: '0 0 1rem 0', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          💰 العملات النشطة
+        </h2>
+        
+        <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
+          {stats && Object.entries(stats.coins).map(([ticker, coin]) => {
+            const config = COINS_CONFIG[ticker as keyof typeof COINS_CONFIG];
+            if (!config || !coin.enabled) return null;
+            
             return (
-              <div key={coin.ticker} style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1rem', borderRight: `4px solid ${coin.color}` }}>
-                {/* عنوان المحفظة */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                  <div style={{ width: '45px', height: '45px', background: coin.color, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.9rem', flexShrink: 0 }}>
-                    {coin.ticker.slice(0, 2)}
-                  </div>
-                  <div style={{ flex: 1, minWidth: '200px' }}>
-                    <div style={{ fontWeight: 'bold', color: coin.color, fontSize: '1.1rem' }}>{coin.ticker} - {coin.name}</div>
-                    <div style={{ background: '#000', borderRadius: '6px', padding: '0.5rem 0.75rem', fontFamily: 'monospace', fontSize: '0.7rem', wordBreak: 'break-all', color: '#4ade80', marginTop: '0.5rem' }}>
-                      📍 {earnings.walletAddress}
+              <div key={ticker} style={{ 
+                background: 'rgba(0,0,0,0.3)', 
+                borderRadius: '16px', 
+                padding: '1.5rem', 
+                borderRight: `4px solid ${config.color}`,
+                border: `1px solid ${config.color}30`,
+                transition: 'transform 0.2s'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ 
+                      width: '50px', 
+                      height: '50px', 
+                      background: `linear-gradient(135deg, ${config.color} 0%, ${config.color}80 100%)`, 
+                      borderRadius: '50%', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      fontWeight: 'bold',
+                      fontSize: '1.5rem',
+                      boxShadow: `0 4px 20px ${config.color}40`
+                    }}>
+                      {config.icon}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: '1.2rem', color: config.color }}>{ticker} - {config.name}</div>
+                      <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>الخوارزمية: {config.algorithm} | المنفذ: {coin.stratumPort}</div>
                     </div>
                   </div>
-                  <div style={{ background: 'rgba(251, 191, 36, 0.2)', padding: '0.5rem 1rem', borderRadius: '8px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>رسوم الحوض</div>
-                    <div style={{ fontWeight: 'bold', color: '#fbbf24' }}>{earnings.poolFee}</div>
+                  
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>حالة العقدة</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                      <span style={{ width: '8px', height: '8px', background: coin.nodeConnected ? '#4ade80' : '#fbbf24', borderRadius: '50%' }}></span>
+                      <span style={{ color: coin.nodeConnected ? '#4ade80' : '#fbbf24', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                        {coin.nodeConnected ? 'متصل' : 'محلي'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* إحصائيات الأرباح */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>💰 إجمالي المستلم</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: coin.color }}>{earnings.totalReceived.toLocaleString()} {coin.ticker}</div>
+                {/* إحصائيات */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '0.875rem' }}>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>⚡ Hashrate</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: config.color }}>{formatHashrate(coin.hashrate)}</div>
                   </div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>📊 الرصيد الحالي</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fbbf24' }}>{earnings.currentBalance.toLocaleString()} {coin.ticker}</div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '0.875rem' }}>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>👷 المعدنين</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{coin.miners.toLocaleString()}</div>
                   </div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>✅ تم سحبه</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#4ade80' }}>{earnings.totalPaidOut.toLocaleString()} {coin.ticker}</div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '0.875rem' }}>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>📦 كتل 24س</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#4ade80' }}>{coin.blocks24h}</div>
                   </div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>⏰ آخر 24س</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{earnings.earnings24h.toLocaleString()} {coin.ticker}</div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '0.875rem' }}>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>📍 الارتفاع</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{coin.blockHeight.toLocaleString()}</div>
                   </div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>📅 آخر 7 أيام</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{earnings.earnings7d.toLocaleString()} {coin.ticker}</div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '0.875rem' }}>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>💰 إجمالي المحصل</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#fbbf24' }}>{coin.totalMined.toFixed(4)} {ticker}</div>
                   </div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>📆 آخر 30 يوم</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{earnings.earnings30d.toLocaleString()} {coin.ticker}</div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '0.875rem' }}>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>⏳ بانتظار السحب</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#60a5fa' }}>{coin.pendingPayout.toFixed(4)} {ticker}</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '0.875rem' }}>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>💵 القيمة ($)</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#ec4899' }}>${(coin.pendingPayout * coin.price).toFixed(2)}</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '0.875rem' }}>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.25rem' }}>🎯 الصعوبة</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{formatNumber(coin.difficulty)}</div>
                   </div>
                 </div>
 
-                {/* آخر دفعة */}
-                <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(74, 222, 128, 0.1)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <div>
-                    <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>📤 آخر دفعة: </span>
-                    <span style={{ fontWeight: 'bold' }}>{earnings.lastPayout}</span>
-                  </div>
-                  <div>
-                    <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>المبلغ: </span>
-                    <span style={{ fontWeight: 'bold', color: '#4ade80' }}>{earnings.lastPayoutAmount} {coin.ticker}</span>
-                  </div>
+                {/* المحفظة */}
+                <div style={{ background: '#000', borderRadius: '8px', padding: '0.75rem 1rem', fontFamily: 'monospace', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <span style={{ color: '#888' }}>💼 المحفظة:</span>
+                  <span style={{ color: '#4ade80' }}>{stats.wallets[ticker]}</span>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-          {['earnings', 'blocks', 'connection'].map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '0.75rem 1.5rem', background: activeTab === tab ? '#3b82f6' : 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontSize: '0.875rem', fontWeight: activeTab === tab ? 'bold' : 'normal' }}>
-              {tab === 'earnings' ? '💼 الأرباح' : tab === 'blocks' ? '📊 الكتل' : '🔌 الاتصال'}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === 'blocks' && (
-          <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '1.5rem', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem' }}>📊 آخر الكتل المكتشفة</h3>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                    <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.75rem', opacity: 0.7 }}>العملة</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.75rem', opacity: 0.7 }}>الكتلة</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.75rem', opacity: 0.7 }}>المكافأة</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.75rem', opacity: 0.7 }}>رسوم الحوض</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.75rem', opacity: 0.7 }}>الوقت</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {RECENT_BLOCKS.map((block, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '0.75rem' }}><span style={{ color: getCoinColor(block.coin), fontWeight: 'bold' }}>{block.coin}</span></td>
-                      <td style={{ padding: '0.75rem', fontFamily: 'monospace' }}>#{block.height.toLocaleString()}</td>
-                      <td style={{ padding: '0.75rem', color: '#4ade80' }}>+{block.reward.toLocaleString()} {block.coin}</td>
-                      <td style={{ padding: '0.75rem', color: '#fbbf24' }}>+{block.poolFee} {block.coin}</td>
-                      <td style={{ padding: '0.75rem', opacity: 0.8 }}>{block.time}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* معلومات الاتصال */}
+        <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '16px', padding: '1.5rem', border: '1px solid rgba(255,255,255,0.1)', marginBottom: '2rem' }}>
+          <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem' }}>🔗 معلومات الحوض</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '1rem' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', opacity: 0.8 }}>📊 رسوم الحوض</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4ade80' }}>1%</div>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '1rem' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', opacity: 0.8 }}>💰 الحد الأدنى للسحب</div>
+              <div style={{ fontSize: '0.9rem' }}>
+                KAS: 1 | RVN: 10 | ALPH: 0.5
+              </div>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '1rem' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', opacity: 0.8 }}>⏱️ وقت الدفعات</div>
+              <div style={{ fontSize: '1rem' }}>كل ساعة تلقائياً</div>
             </div>
           </div>
-        )}
-
-        {activeTab === 'connection' && (
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            {COINS_DATA.map(coin => (
-              <div key={coin.ticker} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '1.5rem', border: `2px solid ${coin.color}40` }}>
-                <div style={{ fontWeight: 'bold', color: coin.color, marginBottom: '0.5rem' }}>{coin.ticker} - {coin.name}</div>
-                <div style={{ background: '#000', borderRadius: '8px', padding: '1rem', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                  <div style={{ color: '#888' }}># Stratum:</div>
-                  <div style={{ color: '#4ade80' }}>stratum+tcp://stratum.yourpool.com:{coin.port}</div>
-                  <div style={{ color: '#60a5fa', marginTop: '0.5rem' }}>-o stratum+tcp://stratum.yourpool.com:{coin.port} -u WALLET -p x</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Footer */}
-      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.1)', padding: '1.5rem', textAlign: 'center', opacity: 0.7, fontSize: '0.8rem' }}>
-        <div>© 2024 MultiCoin Mining Pool | kHeavyHash • KawPoW • Blake3</div>
-        <div style={{ marginTop: '0.25rem', color: '#4ade80' }}>● النظام يعمل 24/7</div>
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.1)', padding: '1.5rem', textAlign: 'center', opacity: 0.7, fontSize: '0.85rem', marginTop: '2rem' }}>
+        <div>© 2024 MultiCoin Mining Pool | تعدين 24/7 | kHeavyHash • KawPoW • Blake3</div>
+        <div style={{ marginTop: '0.5rem', color: '#4ade80' }}>
+          ⛏️ التعدين يعمل تلقائياً - {stats?.mode === 'production' ? 'وضع الإنتاج' : 'وضع المحاكاة'}
+        </div>
       </footer>
+
+      {/* CSS للأنيميشن */}
+      <style jsx global>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
     </div>
   );
 }

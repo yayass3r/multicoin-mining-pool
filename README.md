@@ -1,141 +1,154 @@
-# 🚀 Welcome to Z.ai Code Scaffold
+# ⛏️ MultiCoin Mining Pool - الإنتاج
 
-A modern, production-ready web application scaffold powered by cutting-edge technologies, designed to accelerate your development with [Z.ai](https://chat.z.ai)'s AI-powered coding assistance.
+## 📊 نظرة عامة
 
-## ✨ Technology Stack
+حوض تعدين متعدد العملات يدعم:
+- **KAS (Kaspa)** - خوارزمية kHeavyHash
+- **RVN (Ravencoin)** - خوارزمية KawPoW
+- **ALPH (Alephium)** - خوارزمية Blake3
 
-This scaffold provides a robust foundation built with:
+## 🚀 طرق النشر
 
-### 🎯 Core Framework
-- **⚡ Next.js 16** - The React framework for production with App Router
-- **📘 TypeScript 5** - Type-safe JavaScript for better developer experience
-- **🎨 Tailwind CSS 4** - Utility-first CSS framework for rapid UI development
+### الطريقة 1: Render.com (مجاني)
 
-### 🧩 UI Components & Styling
-- **🧩 shadcn/ui** - High-quality, accessible components built on Radix UI
-- **🎯 Lucide React** - Beautiful & consistent icon library
-- **🌈 Framer Motion** - Production-ready motion library for React
-- **🎨 Next Themes** - Perfect dark mode in 2 lines of code
+1. اربط المشروع بـ GitHub
+2. استخدم `render.yaml` للنشر التلقائي
+3. سيتم إنشاء:
+   - Web Service للوحة التحكم
+   - Redis للإحصائيات
 
-### 📋 Forms & Validation
-- **🎣 React Hook Form** - Performant forms with easy validation
-- **✅ Zod** - TypeScript-first schema validation
-
-### 🔄 State Management & Data Fetching
-- **🐻 Zustand** - Simple, scalable state management
-- **🔄 TanStack Query** - Powerful data synchronization for React
-- **🌐 Fetch** - Promise-based HTTP request
-
-### 🗄️ Database & Backend
-- **🗄️ Prisma** - Next-generation TypeScript ORM
-- **🔐 NextAuth.js** - Complete open-source authentication solution
-
-### 🎨 Advanced UI Features
-- **📊 TanStack Table** - Headless UI for building tables and datagrids
-- **🖱️ DND Kit** - Modern drag and drop toolkit for React
-- **📊 Recharts** - Redefined chart library built with React and D3
-- **🖼️ Sharp** - High performance image processing
-
-### 🌍 Internationalization & Utilities
-- **🌍 Next Intl** - Internationalization library for Next.js
-- **📅 Date-fns** - Modern JavaScript date utility library
-- **🪝 ReactUse** - Collection of essential React hooks for modern development
-
-## 🎯 Why This Scaffold?
-
-- **🏎️ Fast Development** - Pre-configured tooling and best practices
-- **🎨 Beautiful UI** - Complete shadcn/ui component library with advanced interactions
-- **🔒 Type Safety** - Full TypeScript configuration with Zod validation
-- **📱 Responsive** - Mobile-first design principles with smooth animations
-- **🗄️ Database Ready** - Prisma ORM configured for rapid backend development
-- **🔐 Auth Included** - NextAuth.js for secure authentication flows
-- **📊 Data Visualization** - Charts, tables, and drag-and-drop functionality
-- **🌍 i18n Ready** - Multi-language support with Next Intl
-- **🚀 Production Ready** - Optimized build and deployment settings
-- **🤖 AI-Friendly** - Structured codebase perfect for AI assistance
-
-## 🚀 Quick Start
+### الطريقة 2: Docker Compose (VPS)
 
 ```bash
-# Install dependencies
+# النشر على خادم VPS
+cd docker
+docker-compose up -d
+```
+
+هذا سيقوم بتشغيل:
+- عقد Kaspa الكاملة
+- عقد Ravencoin الكاملة
+- عقد Alephium الكاملة
+- Redis للإحصائيات
+- خادم التعدين Pool
+
+## 📁 هيكل المشروع
+
+```
+├── server.js                    # خادم التعدين الرئيسي
+├── src/
+│   ├── app/
+│   │   └── page.tsx            # لوحة التحكم
+│   └── lib/
+│       ├── rpc/
+│       │   ├── base-rpc.ts     # الفئة الأساسية RPC
+│       │   ├── kaspa-rpc.ts    # عميل Kaspa
+│       │   ├── ravencoin-rpc.ts # عميل Ravencoin
+│       │   └── alephium-rpc.ts # عميل Alephium
+│       ├── redis/
+│       │   └── stats-manager.ts # إدارة الإحصائيات
+│       ├── mining-pool-config.ts # إعدادات المحافظ
+│       └── production-config.ts  # إعدادات الإنتاج
+└── docker/
+    ├── docker-compose.yml      # Docker Compose
+    └── Dockerfile              # صورة Docker
+```
+
+## 💼 المحافظ
+
+| العملة | العنوان |
+|--------|---------|
+| KAS | `kaspa:qppxt0expwdg4vra08709ancu4t5stldmc3hdfm4xdschq3whvvqwnr9y7v86` |
+| RVN | `REFRuSaC8iHeKMeUiMg3MEJUKfUD1hmv5Y` |
+| ALPH | `1DJ5UX4BknPeDcwB9C3EzNGZcF9EBG5UdYAKdeWbDGz5b` |
+
+## 🔗 الاتصال بالحوض
+
+### Kaspa (KAS)
+```bash
+./ksminer --pool stratum+tcp://pool.multicoin.com:3333 --wallet YOUR_WALLET --worker worker1
+```
+
+### Ravencoin (RVN)
+```bash
+./t-rex -a kawpow -o stratum+tcp://pool.multicoin.com:3334 -u YOUR_WALLET -p x
+```
+
+### Alephium (ALPH)
+```bash
+./lolMiner -a BLAKE3 -o stratum+tcp://pool.multicoin.com:3336 -u YOUR_WALLET -p x
+```
+
+## 📊 APIs
+
+| Endpoint | Description |
+|----------|-------------|
+| `/api/health` | Health check |
+| `/api/live-stats` | إحصائيات حية |
+| `/api/pool/config` | إعدادات الحوض |
+| `/api/pool/connect` | تعليمات الاتصال |
+| `/api/mining/start` | بدء التعدين |
+| `/api/mining/status` | حالة التعدين |
+
+## ⚙️ متغيرات البيئة
+
+```env
+# المحافظ
+KAS_WALLET=kaspa:qpp...
+RVN_WALLET=R...
+ALPH_WALLET=1...
+
+# عقد Kaspa
+KASPA_RPC_HOST=127.0.0.1
+KASPA_RPC_PORT=16110
+KASPA_RPC_USER=kaspa_rpc
+KASPA_RPC_PASS=your_password
+
+# عقد Ravencoin
+RAVEN_RPC_HOST=127.0.0.1
+RAVEN_RPC_PORT=8766
+RAVEN_RPC_USER=raven_rpc
+RAVEN_RPC_PASS=your_password
+
+# عقد Alephium
+ALEPHIUM_API_HOST=127.0.0.1
+ALEPHIUM_API_PORT=12973
+ALEPHIUM_API_KEY=your_api_key
+
+# Redis
+REDIS_URL=redis://localhost:6379
+```
+
+## 🛠️ التطوير
+
+```bash
+# تثبيت المتطلبات
 bun install
 
-# Start development server
+# تشغيل في وضع التطوير
 bun run dev
 
-# Build for production
+# بناء للإنتاج
 bun run build
 
-# Start production server
-bun start
+# تشغيل الخادم
+bun run server.js
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see your application running.
+## 📈 الميزات
 
-## 🤖 Powered by Z.ai
+- ✅ تعدين 24/7 تلقائي
+- ✅ لوحة تحكم حية
+- ✅ دعم متعدد العملات
+- ✅ نظام Keep-Alive
+- ✅ Redis للإحصائيات
+- ✅ Docker Compose
+- ✅ نشر Render.com
 
-This scaffold is optimized for use with [Z.ai](https://chat.z.ai) - your AI assistant for:
+## 📜 الرخصة
 
-- **💻 Code Generation** - Generate components, pages, and features instantly
-- **🎨 UI Development** - Create beautiful interfaces with AI assistance  
-- **🔧 Bug Fixing** - Identify and resolve issues with intelligent suggestions
-- **📝 Documentation** - Auto-generate comprehensive documentation
-- **🚀 Optimization** - Performance improvements and best practices
-
-Ready to build something amazing? Start chatting with Z.ai at [chat.z.ai](https://chat.z.ai) and experience the future of AI-powered development!
-
-## 📁 Project Structure
-
-```
-src/
-├── app/                 # Next.js App Router pages
-├── components/          # Reusable React components
-│   └── ui/             # shadcn/ui components
-├── hooks/              # Custom React hooks
-└── lib/                # Utility functions and configurations
-```
-
-## 🎨 Available Features & Components
-
-This scaffold includes a comprehensive set of modern web development tools:
-
-### 🧩 UI Components (shadcn/ui)
-- **Layout**: Card, Separator, Aspect Ratio, Resizable Panels
-- **Forms**: Input, Textarea, Select, Checkbox, Radio Group, Switch
-- **Feedback**: Alert, Toast (Sonner), Progress, Skeleton
-- **Navigation**: Breadcrumb, Menubar, Navigation Menu, Pagination
-- **Overlay**: Dialog, Sheet, Popover, Tooltip, Hover Card
-- **Data Display**: Badge, Avatar, Calendar
-
-### 📊 Advanced Data Features
-- **Tables**: Powerful data tables with sorting, filtering, pagination (TanStack Table)
-- **Charts**: Beautiful visualizations with Recharts
-- **Forms**: Type-safe forms with React Hook Form + Zod validation
-
-### 🎨 Interactive Features
-- **Animations**: Smooth micro-interactions with Framer Motion
-- **Drag & Drop**: Modern drag-and-drop functionality with DND Kit
-- **Theme Switching**: Built-in dark/light mode support
-
-### 🔐 Backend Integration
-- **Authentication**: Ready-to-use auth flows with NextAuth.js
-- **Database**: Type-safe database operations with Prisma
-- **API Client**: HTTP requests with Fetch + TanStack Query
-- **State Management**: Simple and scalable with Zustand
-
-### 🌍 Production Features
-- **Internationalization**: Multi-language support with Next Intl
-- **Image Optimization**: Automatic image processing with Sharp
-- **Type Safety**: End-to-end TypeScript with Zod validation
-- **Essential Hooks**: 100+ useful React hooks with ReactUse for common patterns
-
-## 🤝 Get Started with Z.ai
-
-1. **Clone this scaffold** to jumpstart your project
-2. **Visit [chat.z.ai](https://chat.z.ai)** to access your AI coding assistant
-3. **Start building** with intelligent code generation and assistance
-4. **Deploy with confidence** using the production-ready setup
+MIT License
 
 ---
 
-Built with ❤️ for the developer community. Supercharged by [Z.ai](https://chat.z.ai) 🚀
+**⛏️ MultiCoin Mining Pool - تعدين 24/7**

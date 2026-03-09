@@ -1,0 +1,27 @@
+# =====================================================
+# 🚂 Railway.app Configuration
+# =====================================================
+# VPS مجاني: 512MB RAM, 1GB Disk, $5 credit/month
+# =====================================================
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "bun run server.js"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+[[services]]
+internal_port = 10000
+protocol = "tcp"
+
+[[services.ports]]
+handlers = ["http"]
+port = 80
+
+[[services.ports]]
+handlers = ["tls", "http"]
+port = 443

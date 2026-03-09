@@ -1,0 +1,57 @@
+# =====================================================
+# 🪰 Fly.io Configuration - Free Tier
+# =====================================================
+# VPS مجاني: 3 shared-cpu-1x VMs, 3GB storage
+# =====================================================
+
+app = "multicoin-mining-pool"
+primary_region = "sjc"
+
+[build]
+  builder = "heroku/buildpacks:20"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "10000"
+
+[deploy]
+  strategy = "immediate"
+
+[[services]]
+  internal_port = 10000
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [[services.tcp_checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "1s"
+
+# Stratum Ports
+[[services]]
+  internal_port = 3333
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 3333
+
+[[services]]
+  internal_port = 3334
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 3334
+
+[[services]]
+  internal_port = 3336
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 3336

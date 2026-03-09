@@ -1,0 +1,25 @@
+# =====================================================
+# 🌐 Koyeb Configuration - Free Tier
+# =====================================================
+# VPS مجاني: $5.50 credit/month
+# =====================================================
+
+name: multicoin-mining-pool
+
+services:
+  - name: mining-pool
+    instance_type: free
+    regions:
+      - fra
+      - was
+    ports:
+      - 10000
+      - 3333
+      - 3334
+      - 3336
+    health:
+      port: 10000
+      path: /api/health
+    env:
+      NODE_ENV: production
+      PORT: 10000

@@ -1,0 +1,164 @@
+{
+  "pool": {
+    "name": "MultiCoin Mining Pool",
+    "version": "1.0.0",
+    "website": "https://your-pool-domain.com",
+    "adminEmail": "admin@your-pool-domain.com"
+  },
+  
+  "wallets": {
+    "KAS": {
+      "address": "kaspa:qp0nl57r2t2mntlan756383khkukmjf8z7nstl066aqdr0xcjj8n54vstafuj",
+      "fee": 1.0,
+      "minPayout": 100
+    },
+    "RVN": {
+      "address": "REFRuSaC8iHeKMeUiMg3MEJUKfUD1hmv5Y",
+      "fee": 1.0,
+      "minPayout": 10
+    },
+    "ZEPH": {
+      "address": "TO_BE_ADDED",
+      "fee": 1.0,
+      "minPayout": 0.1
+    },
+    "ALPH": {
+      "address": "1DJ5UX4BknPeDcwB9C3EzNGZcF9EBG5UdYAKdeWbDGz5b",
+      "fee": 1.0,
+      "minPayout": 1
+    }
+  },
+  
+  "coins": {
+    "KAS": {
+      "enabled": true,
+      "name": "Kaspa",
+      "algorithm": "kHeavyHash",
+      "stratumPort": 3333,
+      "apiPort": 8333,
+      "difficulty": 16384,
+      "varDiff": {
+        "minDiff": 8192,
+        "maxDiff": 131072,
+        "targetTime": 15,
+        "retargetTime": 60
+      },
+      "node": {
+        "host": "127.0.0.1",
+        "port": 16110,
+        "user": "",
+        "password": ""
+      },
+      "blockRefreshInterval": 500,
+      "minConfirmations": 10
+    },
+    
+    "RVN": {
+      "enabled": true,
+      "name": "Ravencoin",
+      "algorithm": "KawPoW",
+      "stratumPort": 3334,
+      "apiPort": 8334,
+      "difficulty": 0.5,
+      "varDiff": {
+        "minDiff": 0.125,
+        "maxDiff": 8,
+        "targetTime": 15,
+        "retargetTime": 60
+      },
+      "node": {
+        "host": "127.0.0.1",
+        "port": 8766,
+        "user": "rpcuser",
+        "password": "rpcpassword"
+      },
+      "blockRefreshInterval": 500,
+      "minConfirmations": 60
+    },
+    
+    "ZEPH": {
+      "enabled": true,
+      "name": "Zephyr Protocol",
+      "algorithm": "RandomX",
+      "stratumPort": 3335,
+      "apiPort": 8335,
+      "difficulty": 50000,
+      "varDiff": {
+        "minDiff": 10000,
+        "maxDiff": 500000,
+        "targetTime": 15,
+        "retargetTime": 60
+      },
+      "node": {
+        "host": "127.0.0.1",
+        "port": 18081,
+        "user": "",
+        "password": ""
+      },
+      "blockRefreshInterval": 500,
+      "minConfirmations": 10
+    },
+    
+    "ALPH": {
+      "enabled": true,
+      "name": "Alephium",
+      "algorithm": "Blake3",
+      "stratumPort": 3336,
+      "apiPort": 8336,
+      "difficulty": 1000,
+      "varDiff": {
+        "minDiff": 256,
+        "maxDiff": 16384,
+        "targetTime": 15,
+        "retargetTime": 60
+      },
+      "node": {
+        "host": "127.0.0.1",
+        "port": 12973,
+        "user": "",
+        "password": ""
+      },
+      "blockRefreshInterval": 500,
+      "minConfirmations": 5
+    }
+  },
+  
+  "redis": {
+    "host": "127.0.0.1",
+    "port": 6379,
+    "password": "",
+    "db": 0
+  },
+  
+  "database": {
+    "type": "postgresql",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "user": "pool_user",
+    "password": "pool_password",
+    "database": "mining_pool"
+  },
+  
+  "paymentProcessor": {
+    "enabled": true,
+    "interval": 3600000,
+    "batchSize": 100,
+    "minConfirmations": 10
+  },
+  
+  "api": {
+    "enabled": true,
+    "port": 8080,
+    "rateLimit": {
+      "windowMs": 60000,
+      "max": 100
+    }
+  },
+  
+  "logging": {
+    "level": "info",
+    "file": "logs/pool.log",
+    "maxSize": "10m",
+    "maxFiles": 5
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "wallets": {
+    "KAS": {
+      "address": "kaspa:qp0nl57r2t2mntlan756383khkukmjf8z7nstl066aqdr0xcjj8n54vstafuj",
+      "fee": 1.0,
+      "minPayout": 100,
+      "description": "Kaspa wallet for pool fees and rewards",
+      "notes": "This wallet receives 1% pool fee from all KAS mining rewards"
+    },
+    "RVN": {
+      "address": "REFRuSaC8iHeKMeUiMg3MEJUKfUD1hmv5Y",
+      "fee": 1.0,
+      "minPayout": 10,
+      "description": "Ravencoin wallet for pool fees and rewards",
+      "notes": "This wallet receives 1% pool fee from all RVN mining rewards"
+    },
+    "ZEPH": {
+      "address": "TO_BE_ADDED",
+      "fee": 1.0,
+      "minPayout": 0.1,
+      "description": "Zephyr Protocol wallet for pool fees and rewards",
+      "notes": "Replace TO_BE_ADDED with your ZEPH wallet address"
+    },
+    "ALPH": {
+      "address": "1DJ5UX4BknPeDcwB9C3EzNGZcF9EBG5UdYAKdeWbDGz5b",
+      "fee": 1.0,
+      "minPayout": 1,
+      "description": "Alephium wallet for pool fees and rewards",
+      "notes": "This wallet receives 1% pool fee from all ALPH mining rewards"
+    }
+  },
+  
+  "payoutSettings": {
+    "enabled": true,
+    "intervalSeconds": 3600,
+    "batchSize": 100,
+    "fee": 0.001,
+    "minConfirmations": {
+      "KAS": 10,
+      "RVN": 60,
+      "ZEPH": 10,
+      "ALPH": 5
+    }
+  },
+  
+  "instructions": {
+    "where_to_place": "This file should be placed at config/wallets.json or integrated into pool.config.json",
+    "security_warning": "NEVER share your private keys! Only use public wallet addresses.",
+    "backup": "Always backup your wallet seed phrases in a secure location."
+  }
+}

@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  # =====================================================
+  # خادم Stratum الرئيسي
+  # =====================================================
+  stratum-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: multicoin-stratum
+    restart: unless-stopped
+    ports:
+      - "3333:3333"  # KAS - kHeavyHash
+      - "3334:3334"  # RVN - KawPoW
+      - "3335:3335"  # ZEPH - RandomX
+      - "3336:3336"  # ALPH - Blake3
+      - "8080:8080"  # API
+    volumes:
+      - ../config:/app/config
+      - ../logs:/app/logs
+    environment:
+      - NODE_ENV=production
+      - POOL_CONFIG=/app/config/pool.config.json
+      - REDIS_HOST=redis
+      - DB_HOST=postgres
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - mining-pool-network
+
+  # =====================================================
+  # Redis للتخزين المؤقت والإحصائيات
+  # =====================================================
+  redis:
+    image: redis:7-alpine
+    container_name: multicoin-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - mining-pool-network
+
+  # =====================================================
+  # PostgreSQL لقاعدة البيانات
+  # =====================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: multicoin-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=pool_user
+      - POSTGRES_PASSWORD=pool_password
+      - POSTGRES_DB=mining_pool
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mining-pool-network
+
+  # =====================================================
+  # لوحة التحكم (Dashboard)
+  # =====================================================
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dashboard
+    container_name: multicoin-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://stratum-server:8080
+    depends_on:
+      - stratum-server
+    networks:
+      - mining-pool-network
+
+  # =====================================================
+  # Nginx Reverse Proxy
+  # =====================================================
+  nginx:
+    image: nginx:alpine
+    container_name: multicoin-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - dashboard
+      - stratum-server
+    networks:
+      - mining-pool-network
+
+networks:
+  mining-pool-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:

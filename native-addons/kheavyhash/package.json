@@ -1,0 +1,11 @@
+{
+  "name": "kheavyhash-native",
+  "version": "1.0.0",
+  "description": "Native kHeavyHash implementation for Kaspa mining",
+  "main": "build/Release/kheavyhash.node",
+  "scripts": {
+    "install": "node-gyp rebuild",
+    "build": "node-gyp rebuild"
+  },
+  "gypfile": true
+}
